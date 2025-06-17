@@ -1,0 +1,12 @@
+# Bỏ qua thư mục node_modules
+node_modules/
+
+# Bỏ qua file môi trường
+.env
+
+# Bỏ thư mục log tạm (nếu có)
+logs/
+npm-debug.log*
+
+# VSCode config
+.vscode/
