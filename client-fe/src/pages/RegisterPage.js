@@ -31,7 +31,6 @@ const RegisterPage = () => {
         <button type="submit">Register</button>
       </form>
       {message && <p>{message}</p>}
-      conso
     </div>
   );
 };
