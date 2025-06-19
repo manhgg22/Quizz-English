@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // thêm dòng này
 import axios from '../api/axiosInstance';
 
 const LoginPage = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [message, setMessage] = useState('');
   const [token, setToken] = useState('');
+
+  const navigate = useNavigate(); // khởi tạo navigate
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -14,9 +17,19 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       const res = await axios.post('/auth/login', form);
-      setToken(res.data.token);
+      const { token, user } = res.data; // giả sử server trả về user object chứa role
+
+      setToken(token);
       setMessage('Login successful');
-      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+
+      // điều hướng theo role
+      if (user.role === 'admin') {
+        navigate('/admin/home');
+      } else {
+        navigate('/home'); // trang dành cho user
+      }
     } catch (err) {
       setMessage(err.response?.data?.msg || 'Login failed');
     }

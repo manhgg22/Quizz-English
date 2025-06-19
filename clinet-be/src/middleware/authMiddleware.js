@@ -1,23 +1,32 @@
+// src/middleware/authMiddleware.js
+
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 require('dotenv').config();
 
-const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+module.exports = (requireAdmin = false) => {
+  return async (req, res, next) => {
+    const authHeader = req.headers.authorization;
 
-  // Kiểm tra có token không
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ msg: 'Unauthorized: No token provided' });
-  }
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ msg: 'Unauthorized: No token provided' });
+    }
 
-  const token = authHeader.split(' ')[1];
+    const token = authHeader.split(' ')[1];
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Gắn thông tin user vào request
-    next(); // Cho phép tiếp tục
-  } catch (err) {
-    return res.status(401).json({ msg: 'Unauthorized: Invalid token' });
-  }
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.userId).select('-password');
+      if (!user) return res.status(401).json({ msg: 'User not found' });
+
+      if (requireAdmin && user.role !== 'admin') {
+        return res.status(403).json({ msg: 'Admins only' });
+      }
+
+      req.user = user;
+      next();
+    } catch (err) {
+      return res.status(401).json({ msg: 'Invalid token' });
+    }
+  };
 };
-
-module.exports = authMiddleware;
