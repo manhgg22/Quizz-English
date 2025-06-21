@@ -1,283 +1,528 @@
-// src/layout/Header.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  Layout, 
+  Menu, 
+  Button, 
+  Dropdown, 
+  Avatar, 
+  Spin, 
+  Badge,
+  Space,
+  Typography,
+  Drawer,
+  Divider,
+  theme
+} from 'antd';
+import {
+  HomeOutlined,
+  BarChartOutlined,
+  SettingOutlined,
+  LogoutOutlined,
+  LoginOutlined,
+  UserAddOutlined,
+  UserOutlined,
+  MenuOutlined,
+  BellOutlined,
+  QuestionCircleOutlined,
+  DashboardOutlined
+} from '@ant-design/icons';
+
+const { Header: AntHeader } = Layout;
+const { Text, Title } = Typography;
 
 const Header = () => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
+  const [currentPath, setCurrentPath] = useState('/home');
+  const { token } = theme.useToken();
+  
+  // Giả lập navigation và location
+  const navigate = (path) => {
+    setCurrentPath(path);
+    setMobileMenuVisible(false);
+    console.log('Navigating to:', path);
+  };
+
+  const hideHeaderPaths = ['/login', '/register', '/forgot-password', '/welcome'];
 
   useEffect(() => {
-    checkAuthentication();
-  }, [location.pathname]); // Re-check when route changes
+    // Giả lập việc load user data
+    const loadUserData = () => {
+      setIsLoading(true);
+      setTimeout(() => {
+        // Giả lập user data
+        setUser({
+          id: 1,
+          email: 'admin@duckmen.com',
+          role: 'admin',
+          name: 'Admin User',
+          avatar: null
+        });
+        setIsLoading(false);
+      }, 1000);
+    };
 
-  const checkAuthentication = () => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (token && userData) {
-      try {
-        const userObj = JSON.parse(userData);
-        setUser(userObj);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        clearAuthData();
-      }
-    } else {
-      setUser(null);
-    }
-    setIsLoading(false);
-  };
-
-  const clearAuthData = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-  };
+    loadUserData();
+  }, []);
 
   const handleLogout = () => {
-    clearAuthData();
+    setUser(null);
     navigate('/login');
+    console.log('User logged out');
   };
 
-  const handleNavigation = (path) => {
-    navigate(path);
+  const toggleMobileMenu = () => {
+    setMobileMenuVisible(!mobileMenuVisible);
   };
 
-  // Don't show header on login and register pages
-  const hideHeaderPaths = ['/login', '/register', '/forgot-password', '/welcome'];
-  if (hideHeaderPaths.includes(location.pathname)) {
-    return null;
-  }
+  if (hideHeaderPaths.includes(currentPath)) return null;
 
-  // Show loading state briefly
   if (isLoading) {
     return (
-      <header style={{ 
-        padding: '10px 20px', 
-        backgroundColor: '#007bff', 
-        color: 'white',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '60px'
-      }}>
-        <div>Đang tải...</div>
-      </header>
+      <AntHeader 
+        style={{ 
+          background: 'linear-gradient(135deg, #1890ff 0%, #722ed1 50%, #13c2c2 100%)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+        }}
+      >
+        <Spin 
+          tip="Đang tải..." 
+          size="large" 
+          style={{ color: 'white' }}
+        />
+      </AntHeader>
     );
   }
 
+  const adminMenuItems = [
+    {
+      key: 'home',
+      icon: <HomeOutlined style={{ color: token.colorPrimary }} />,
+      label: (
+        <Space>
+          <Text>Trang chủ</Text>
+          {currentPath === '/home' && <Badge status="processing" />}
+        </Space>
+      ),
+      onClick: () => navigate('/home'),
+    },
+    {
+      key: 'dashboard',
+      icon: <DashboardOutlined style={{ color: token.colorWarning }} />,
+      label: 'Dashboard',
+      onClick: () => navigate('/dashboard'),
+    },
+    {
+      key: 'results',
+      icon: <BarChartOutlined style={{ color: token.colorSuccess }} />,
+      label: (
+        <Space>
+          <Text>Lịch sử kết quả</Text>
+          <Badge count={5} size="small" style={{ backgroundColor: token.colorSuccess }} />
+        </Space>
+      ),
+      onClick: () => navigate('/user/results'),
+    },
+    {
+      key: 'admin',
+      icon: <SettingOutlined style={{ color: token.colorWarning }} />,
+      label: 'Quản trị hệ thống',
+      onClick: () => navigate('/admin'),
+    },
+    {
+      key: 'help',
+      icon: <QuestionCircleOutlined style={{ color: token.colorInfo }} />,
+      label: 'Trợ giúp & Hướng dẫn',
+      onClick: () => navigate('/help'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined style={{ color: token.colorError }} />,
+      label: <Text type="danger" strong>Đăng xuất</Text>,
+      onClick: handleLogout,
+    },
+  ];
+
+  const userMenuItems = [
+    {
+      key: 'home',
+      icon: <HomeOutlined style={{ color: token.colorPrimary }} />,
+      label: (
+        <Space>
+          <Text>Trang chủ</Text>
+          {currentPath === '/home' && <Badge status="processing" />}
+        </Space>
+      ),
+      onClick: () => navigate('/home'),
+    },
+    {
+      key: 'results',
+      icon: <BarChartOutlined style={{ color: token.colorSuccess }} />,
+      label: (
+        <Space>
+          <Text>Lịch sử kết quả</Text>
+          <Badge count={3} size="small" style={{ backgroundColor: token.colorSuccess }} />
+        </Space>
+      ),
+      onClick: () => navigate('/user/results'),
+    },
+    {
+      key: 'help',
+      icon: <QuestionCircleOutlined style={{ color: token.colorInfo }} />,
+      label: 'Trợ giúp & Hướng dẫn',
+      onClick: () => navigate('/help'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined style={{ color: token.colorError }} />,
+      label: <Text type="danger" strong>Đăng xuất</Text>,
+      onClick: handleLogout,
+    },
+  ];
+
+  const userDropdownMenu = {
+    items: user?.role === 'admin' ? adminMenuItems : userMenuItems,
+    style: {
+      borderRadius: token.borderRadiusLG,
+      boxShadow: token.boxShadowSecondary,
+      border: 'none',
+      marginTop: token.marginXS,
+      minWidth: 240,
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      backdropFilter: 'blur(10px)'
+    }
+  };
+
   return (
-    <header style={{ 
-      padding: '10px 20px', 
-      backgroundColor: '#007bff', 
-      color: 'white',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-    }}>
-      <div>
-        <h1 
+    <>
+      <AntHeader 
+        style={{ 
+          background: 'linear-gradient(135deg, #1890ff 0%, #722ed1 50%, #13c2c2 100%)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: `0 ${token.paddingLG}px`,
+          height: 64,
+          lineHeight: '64px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000,
+          margin: 0,
+          border: 'none'
+        }}
+      >
+        {/* Logo và Title */}
+        <Space 
+          size="large"
           style={{ 
-            margin: 0, 
-            fontSize: '1.5rem',
-            cursor: 'pointer'
+            color: 'white',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            alignItems: 'center',
+            height: '64px',
+            lineHeight: '64px'
           }}
-          onClick={() => handleNavigation('/home')}
+          onClick={() => navigate('/home')}
+          className="hover-scale"
         >
-          🦆 DuckMen Quiz System
-        </h1>
-      </div>
-
-      {user ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <nav style={{ display: 'flex', gap: '15px' }}>
-            <button 
-              onClick={() => handleNavigation('/home')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'white',
-                cursor: 'pointer',
-                padding: '8px 12px',
-                borderRadius: '4px',
-                fontSize: '0.95rem',
-                textDecoration: 'none',
-                backgroundColor: location.pathname === '/home' ? 'rgba(255,255,255,0.2)' : 'transparent',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                if (location.pathname !== '/home') {
-                  e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (location.pathname !== '/home') {
-                  e.target.style.backgroundColor = 'transparent';
-                }
+          <div style={{ fontSize: 28, lineHeight: 1 }}>🦆</div>
+          <div>
+            <Title 
+              level={4} 
+              style={{ 
+                color: 'white', 
+                margin: 0, 
+                fontWeight: 700,
+                letterSpacing: '0.5px'
               }}
             >
-              🏠 Trang chủ
-            </button>
-            
-            <button 
-              onClick={() => handleNavigation('/user/results')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'white',
-                cursor: 'pointer',
-                padding: '8px 12px',
-                borderRadius: '4px',
-                fontSize: '0.95rem',
-                textDecoration: 'none',
-                backgroundColor: location.pathname === '/user/results' ? 'rgba(255,255,255,0.2)' : 'transparent',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                if (location.pathname !== '/user/results') {
-                  e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (location.pathname !== '/user/results') {
-                  e.target.style.backgroundColor = 'transparent';
-                }
+              DuckMen Quiz
+            </Title>
+            <Text 
+              style={{ 
+                color: 'rgba(255, 255, 255, 0.8)', 
+                fontSize: 12,
+                display: window.innerWidth < 640 ? 'none' : 'block'
               }}
             >
-              📊 Lịch sử
-            </button>
+              Hệ thống thi trắc nghiệm thông minh
+            </Text>
+          </div>
+        </Space>
 
-            {/* Admin menu */}
-            {user.role === 'admin' && (
-              <button 
-                onClick={() => handleNavigation('/admin')}
+        {/* Desktop Navigation */}
+        <div style={{ 
+          display: window.innerWidth < 768 ? 'none' : 'flex',
+          alignItems: 'center',
+          height: '64px'
+        }}>
+          {user ? (
+            <Space size="large">
+              {/* Notifications */}
+              <Badge count={2} size="small" style={{ backgroundColor: token.colorWarning }}>
+                <Button
+                  type="text"
+                  icon={<BellOutlined />}
+                  size="large"
+                  style={{
+                    color: 'white',
+                    border: 'none',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                  }}
+                />
+              </Badge>
+
+              {/* User Dropdown */}
+              <Dropdown
+                menu={userDropdownMenu}
+                placement="bottomRight"
+                trigger={['click']}
+              >
+                <Space 
+                  style={{
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: token.borderRadiusLG,
+                    padding: `${token.paddingXS}px ${token.paddingSM}px`
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                  }}
+                >
+                  <Avatar
+                    icon={<UserOutlined />}
+                    size="large"
+                    style={{
+                      background: 'linear-gradient(135deg, #ffa940 0%, #ff7875 100%)',
+                      color: 'white',
+                      boxShadow: token.boxShadow
+                    }}
+                  />
+                  <div style={{ color: 'white', textAlign: 'left', display: window.innerWidth < 1024 ? 'none' : 'block' }}>
+                    <div style={{ fontSize: 14, fontWeight: 500 }}>
+                      <Space size="small">
+                        <span>{user.role === 'admin' ? '👑' : '👤'}</span>
+                        <span>{user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</span>
+                      </Space>
+                    </div>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 12 }}>
+                      {user.email}
+                    </Text>
+                  </div>
+                </Space>
+              </Dropdown>
+            </Space>
+          ) : (
+            <Space size="middle">
+              <Button
+                icon={<LoginOutlined />}
+                onClick={() => navigate('/login')}
+                size="large"
                 style={{
-                  background: 'none',
-                  border: 'none',
                   color: 'white',
-                  cursor: 'pointer',
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  fontSize: '0.95rem',
-                  textDecoration: 'none',
-                  backgroundColor: location.pathname.includes('/admin') ? 'rgba(255,255,255,0.2)' : 'transparent',
-                  transition: 'background-color 0.2s'
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                  backgroundColor: 'transparent',
+                  borderRadius: token.borderRadiusLG,
+                  paddingLeft: token.paddingLG,
+                  paddingRight: token.paddingLG,
+                  transition: 'all 0.3s ease'
                 }}
                 onMouseEnter={(e) => {
-                  if (!location.pathname.includes('/admin')) {
-                    e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                  }
+                  e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                  e.target.style.borderColor = 'white';
                 }}
                 onMouseLeave={(e) => {
-                  if (!location.pathname.includes('/admin')) {
-                    e.target.style.backgroundColor = 'transparent';
-                  }
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                 }}
               >
-                ⚙️ Quản trị
-              </button>
-            )}
-          </nav>
-          
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '10px',
-            borderLeft: '1px solid rgba(255,255,255,0.3)',
-            paddingLeft: '20px'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              fontSize: '0.9rem'
-            }}>
-              <span style={{ 
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                padding: '4px 8px',
-                borderRadius: '12px',
-                fontSize: '0.8rem'
-              }}>
-                {user.role === 'admin' ? '👑 Admin' : '👤 User'}
-              </span>
-              <span>👋 {user.email}</span>
-            </div>
-            
-            <button 
-              onClick={handleLogout}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
-            >
-              🚪 Đăng xuất
-            </button>
-          </div>
+                Đăng nhập
+              </Button>
+              <Button
+                type="primary"
+                icon={<UserAddOutlined />}
+                onClick={() => navigate('/register')}
+                size="large"
+                style={{
+                  background: 'linear-gradient(135deg, #ff7875 0%, #f759ab 100%)',
+                  borderColor: 'transparent',
+                  borderRadius: token.borderRadiusLG,
+                  paddingLeft: token.paddingLG,
+                  paddingRight: token.paddingLG,
+                  boxShadow: token.boxShadow,
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = token.boxShadow;
+                }}
+              >
+                Đăng ký
+              </Button>
+            </Space>
+          )}
         </div>
-      ) : (
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            onClick={() => handleNavigation('/login')}
+
+        {/* Mobile Menu Button */}
+        <div style={{ 
+          display: window.innerWidth >= 768 ? 'none' : 'flex',
+          alignItems: 'center',
+          height: '64px'
+        }}>
+          <Button
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={toggleMobileMenu}
+            size="large"
             style={{
-              padding: '8px 16px',
-              backgroundColor: 'transparent',
               color: 'white',
-              border: '1px solid white',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = 'white';
-              e.target.style.color = '#007bff';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-              e.target.style.color = 'white';
-            }}
-          >
-            Đăng nhập
-          </button>
-          <button 
-            onClick={() => handleNavigation('/register')}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: 'white',
-              color: '#007bff',
               border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: '500',
-              transition: 'all 0.2s'
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              transition: 'all 0.3s ease'
             }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#f8f9fa';
-              e.target.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'white';
-              e.target.style.transform = 'translateY(0)';
-            }}
-          >
-            Đăng ký
-          </button>
+          />
         </div>
-      )}
-    </header>
+      </AntHeader>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        title={
+          <Space size="middle">
+            <span style={{ fontSize: 24 }}>🦆</span>
+            <Title level={4} style={{ margin: 0 }}>DuckMen Quiz</Title>
+          </Space>
+        }
+        placement="right"
+        onClose={() => setMobileMenuVisible(false)}
+        open={mobileMenuVisible}
+        width={300}
+        style={{ display: window.innerWidth >= 768 ? 'none' : 'block' }}
+        styles={{
+          body: { padding: token.paddingLG }
+        }}
+      >
+        {user ? (
+          <div>
+            {/* User Info Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, #e6f7ff 0%, #f9f0ff 100%)',
+              borderRadius: token.borderRadiusLG,
+              padding: token.paddingLG,
+              marginBottom: token.marginLG,
+              border: `1px solid ${token.colorBorder}`
+            }}>
+              <Space size="middle">
+                <Avatar
+                  icon={<UserOutlined />}
+                  size="large"
+                  style={{
+                    background: 'linear-gradient(135deg, #ffa940 0%, #ff7875 100%)',
+                    color: 'white'
+                  }}
+                />
+                <div>
+                  <div style={{ fontWeight: 500, marginBottom: 4 }}>
+                    <Space size="small">
+                      <span>{user.role === 'admin' ? '👑' : '👤'}</span>
+                      <span>{user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</span>
+                    </Space>
+                  </div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {user.email}
+                  </Text>
+                </div>
+              </Space>
+            </div>
+
+            <Divider style={{ margin: `${token.marginLG}px 0` }} />
+
+            {/* Menu Items */}
+            <Menu
+              mode="vertical"
+              style={{ 
+                border: 'none',
+                backgroundColor: 'transparent'
+              }}
+              items={user.role === 'admin' ? adminMenuItems : userMenuItems}
+            />
+          </div>
+        ) : (
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Button
+              icon={<LoginOutlined />}
+              onClick={() => navigate('/login')}
+              size="large"
+              style={{ 
+                width: '100%',
+                borderRadius: token.borderRadiusLG,
+                height: 48
+              }}
+            >
+              Đăng nhập
+            </Button>
+            <Button
+              type="primary"
+              icon={<UserAddOutlined />}
+              onClick={() => navigate('/register')}
+              size="large"
+              style={{ 
+                width: '100%',
+                background: 'linear-gradient(135deg, #ff7875 0%, #f759ab 100%)',
+                borderColor: 'transparent',
+                borderRadius: token.borderRadiusLG,
+                height: 48
+              }}
+            >
+              Đăng ký
+            </Button>
+          </Space>
+        )}
+      </Drawer>
+
+      <style jsx global>{`
+        .ant-layout-header {
+          padding: 0 !important;
+          line-height: 64px !important;
+          height: 64px !important;
+        }
+        .hover-scale:hover {
+          transform: scale(1.05);
+        }
+        body {
+          margin: 0;
+          padding: 0;
+        }
+        .ant-layout {
+          background: transparent;
+        }
+      `}</style>
+    </>
   );
 };
 
