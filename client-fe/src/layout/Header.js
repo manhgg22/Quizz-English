@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Layout, 
-  Menu, 
   Button, 
   Dropdown, 
   Avatar, 
@@ -9,9 +8,8 @@ import {
   Badge,
   Space,
   Typography,
-  Drawer,
-  Divider,
-  theme
+  theme,
+  message
 } from 'antd';
 import {
   HomeOutlined,
@@ -21,7 +19,6 @@ import {
   LoginOutlined,
   UserAddOutlined,
   UserOutlined,
-  MenuOutlined,
   BellOutlined,
   QuestionCircleOutlined,
   DashboardOutlined
@@ -32,53 +29,212 @@ const { Text, Title } = Typography;
 
 const Header = () => {
   const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
-  const [currentPath, setCurrentPath] = useState('/home');
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [currentPath, setCurrentPath] = useState(window.location.pathname || '/home');
+  const [notifications, setNotifications] = useState([]);
+  const [userStats, setUserStats] = useState({
+    totalTests: 0,
+    recentTests: 0,
+    pendingResults: 0
+  });
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
   const { token } = theme.useToken();
   
-  // Giả lập navigation và location
+  // API endpoints
+  const API_BASE = 'http://localhost:3001/api' || process.env.REACT_APP_API_URL;
+  
+  // Navigation function
   const navigate = (path) => {
     setCurrentPath(path);
-    setMobileMenuVisible(false);
+    window.history.pushState({}, '', path);
     console.log('Navigating to:', path);
   };
 
   const hideHeaderPaths = ['/login', '/register', '/forgot-password', '/welcome'];
 
+  // Load user data immediately from localStorage
   useEffect(() => {
-    // Giả lập việc load user data
-    const loadUserData = () => {
-      setIsLoading(true);
-      setTimeout(() => {
-        // Giả lập user data
-        setUser({
-          id: 1,
-          email: 'admin@duckmen.com',
-          role: 'admin',
-          name: 'Admin User',
-          avatar: null
-        });
-        setIsLoading(false);
-      }, 1000);
+    const loadUserFromStorage = () => {
+      try {
+        const token = localStorage.getItem('token');
+        const userData = localStorage.getItem('user');
+        
+        if (token && userData) {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          
+          // Load additional data in background
+          loadAdditionalDataInBackground(parsedUser.id, token);
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+      } finally {
+        setIsInitialLoading(false);
+      }
     };
 
-    loadUserData();
+    loadUserFromStorage();
   }, []);
 
-  const handleLogout = () => {
+  // Load additional data in background
+  const loadAdditionalDataInBackground = async (userId, token) => {
+    setIsStatsLoading(true);
+    
+    try {
+      const [statsResult, notificationsResult] = await Promise.allSettled([
+        loadUserStats(userId, token),
+        loadNotifications(userId, token)
+      ]);
+
+      if (statsResult.status === 'rejected') {
+        console.error('Failed to load user stats:', statsResult.reason);
+      }
+      if (notificationsResult.status === 'rejected') {
+        console.error('Failed to load notifications:', notificationsResult.reason);
+      }
+    } catch (error) {
+      console.error('Error loading additional data:', error);
+    } finally {
+      setIsStatsLoading(false);
+    }
+  };
+
+  // Load user statistics
+  const loadUserStats = async (userId, token) => {
+    try {
+      const response = await fetch(`${API_BASE}/users/${userId}/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const stats = await response.json();
+        setUserStats({
+          totalTests: stats.totalTests || 0,
+          recentTests: stats.recentTests || 0,
+          pendingResults: stats.pendingResults || 0
+        });
+      } else if (response.status === 401) {
+        handleTokenExpired();
+      }
+    } catch (error) {
+      console.error('Error loading user stats:', error);
+    }
+  };
+
+  // Load notifications
+  const loadNotifications = async (userId, token) => {
+    try {
+      const response = await fetch(`${API_BASE}/users/${userId}/notifications`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const notifs = await response.json();
+        setNotifications(notifs || []);
+      } else if (response.status === 401) {
+        handleTokenExpired();
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  };
+
+  // Handle token expiration
+  const handleTokenExpired = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
+    setNotifications([]);
+    setUserStats({
+      totalTests: 0,
+      recentTests: 0,
+      pendingResults: 0
+    });
+    message.warning('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại');
     navigate('/login');
-    console.log('User logged out');
   };
 
-  const toggleMobileMenu = () => {
-    setMobileMenuVisible(!mobileMenuVisible);
+  // Logout function
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (token) {
+        // Non-blocking logout API call
+        fetch(`${API_BASE}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }).catch(err => console.error('Logout API error:', err));
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+    
+    // Clear data immediately
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('remember_email');
+    
+    setUser(null);
+    setNotifications([]);
+    setUserStats({
+      totalTests: 0,
+      recentTests: 0,
+      pendingResults: 0
+    });
+    
+    navigate('/login');
+    message.success('Đăng xuất thành công');
   };
 
+  // Listen for storage changes (multi-tab sync)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'user' || e.key === 'token') {
+        if (!e.newValue) {
+          setUser(null);
+          setNotifications([]);
+          setUserStats({
+            totalTests: 0,
+            recentTests: 0,
+            pendingResults: 0
+          });
+        } else if (e.key === 'user' && e.newValue) {
+          try {
+            const newUser = JSON.parse(e.newValue);
+            setUser(newUser);
+          } catch (error) {
+            console.error('Error parsing user data from storage:', error);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Hide header on certain paths
   if (hideHeaderPaths.includes(currentPath)) return null;
 
-  if (isLoading) {
+  // Show minimal loading for initial load only
+  if (isInitialLoading) {
     return (
       <AntHeader 
         style={{ 
@@ -86,14 +242,11 @@ const Header = () => {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          height: 64
         }}
       >
-        <Spin 
-          tip="Đang tải..." 
-          size="large" 
-          style={{ color: 'white' }}
-        />
+        <Spin size="small" style={{ color: 'white' }} />
       </AntHeader>
     );
   }
@@ -113,7 +266,14 @@ const Header = () => {
     {
       key: 'dashboard',
       icon: <DashboardOutlined style={{ color: token.colorWarning }} />,
-      label: 'Dashboard',
+      label: (
+        <Space>
+          <Text>Dashboard</Text>
+          {userStats.recentTests > 0 && (
+            <Badge count={userStats.recentTests} size="small" style={{ backgroundColor: token.colorWarning }} />
+          )}
+        </Space>
+      ),
       onClick: () => navigate('/dashboard'),
     },
     {
@@ -122,7 +282,9 @@ const Header = () => {
       label: (
         <Space>
           <Text>Lịch sử kết quả</Text>
-          <Badge count={5} size="small" style={{ backgroundColor: token.colorSuccess }} />
+          {userStats.pendingResults > 0 && (
+            <Badge count={userStats.pendingResults} size="small" style={{ backgroundColor: token.colorSuccess }} />
+          )}
         </Space>
       ),
       onClick: () => navigate('/user/results'),
@@ -168,7 +330,9 @@ const Header = () => {
       label: (
         <Space>
           <Text>Lịch sử kết quả</Text>
-          <Badge count={3} size="small" style={{ backgroundColor: token.colorSuccess }} />
+          {userStats.pendingResults > 0 && (
+            <Badge count={userStats.pendingResults} size="small" style={{ backgroundColor: token.colorSuccess }} />
+          )}
         </Space>
       ),
       onClick: () => navigate('/user/results'),
@@ -197,11 +361,13 @@ const Header = () => {
       boxShadow: token.boxShadowSecondary,
       border: 'none',
       marginTop: token.marginXS,
-      minWidth: 240,
+      minWidth: 280,
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
       backdropFilter: 'blur(10px)'
     }
   };
+
+  const unreadNotifications = notifications.filter(n => !n.read).length;
 
   return (
     <>
@@ -222,7 +388,7 @@ const Header = () => {
           border: 'none'
         }}
       >
-        {/* Logo và Title */}
+        {/* Logo and Title */}
         <Space 
           size="large"
           style={{ 
@@ -252,8 +418,7 @@ const Header = () => {
             <Text 
               style={{ 
                 color: 'rgba(255, 255, 255, 0.8)', 
-                fontSize: 12,
-                display: window.innerWidth < 640 ? 'none' : 'block'
+                fontSize: 12
               }}
             >
               Hệ thống thi trắc nghiệm thông minh
@@ -261,16 +426,20 @@ const Header = () => {
           </div>
         </Space>
 
-        {/* Desktop Navigation */}
+        {/* Right Navigation */}
         <div style={{ 
-          display: window.innerWidth < 768 ? 'none' : 'flex',
+          display: 'flex',
           alignItems: 'center',
           height: '64px'
         }}>
           {user ? (
             <Space size="large">
               {/* Notifications */}
-              <Badge count={2} size="small" style={{ backgroundColor: token.colorWarning }}>
+              <Badge 
+                count={unreadNotifications} 
+                size="small" 
+                style={{ backgroundColor: token.colorWarning }}
+              >
                 <Button
                   type="text"
                   icon={<BellOutlined />}
@@ -281,6 +450,7 @@ const Header = () => {
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     transition: 'all 0.3s ease'
                   }}
+                  onClick={() => navigate('/notifications')}
                   onMouseEnter={(e) => {
                     e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
                   }}
@@ -312,15 +482,16 @@ const Header = () => {
                   }}
                 >
                   <Avatar
-                    icon={<UserOutlined />}
+                    src={user.avatar}
+                    icon={!user.avatar && <UserOutlined />}
                     size="large"
                     style={{
-                      background: 'linear-gradient(135deg, #ffa940 0%, #ff7875 100%)',
+                      background: user.avatar ? 'transparent' : 'linear-gradient(135deg, #ffa940 0%, #ff7875 100%)',
                       color: 'white',
                       boxShadow: token.boxShadow
                     }}
                   />
-                  <div style={{ color: 'white', textAlign: 'left', display: window.innerWidth < 1024 ? 'none' : 'block' }}>
+                  <div style={{ color: 'white', textAlign: 'left' }}>
                     <div style={{ fontSize: 14, fontWeight: 500 }}>
                       <Space size="small">
                         <span>{user.role === 'admin' ? '👑' : '👤'}</span>
@@ -330,6 +501,12 @@ const Header = () => {
                     <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 12 }}>
                       {user.email}
                     </Text>
+                    {userStats.totalTests > 0 && (
+                      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11, display: 'block' }}>
+                        Đã làm {userStats.totalTests} bài thi
+                        {isStatsLoading && <Spin size="small" style={{ marginLeft: 8 }} />}
+                      </Text>
+                    )}
                   </div>
                 </Space>
               </Dropdown>
@@ -388,122 +565,7 @@ const Header = () => {
             </Space>
           )}
         </div>
-
-        {/* Mobile Menu Button */}
-        <div style={{ 
-          display: window.innerWidth >= 768 ? 'none' : 'flex',
-          alignItems: 'center',
-          height: '64px'
-        }}>
-          <Button
-            type="text"
-            icon={<MenuOutlined />}
-            onClick={toggleMobileMenu}
-            size="large"
-            style={{
-              color: 'white',
-              border: 'none',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              transition: 'all 0.3s ease'
-            }}
-          />
-        </div>
       </AntHeader>
-
-      {/* Mobile Drawer */}
-      <Drawer
-        title={
-          <Space size="middle">
-            <span style={{ fontSize: 24 }}>🦆</span>
-            <Title level={4} style={{ margin: 0 }}>DuckMen Quiz</Title>
-          </Space>
-        }
-        placement="right"
-        onClose={() => setMobileMenuVisible(false)}
-        open={mobileMenuVisible}
-        width={300}
-        style={{ display: window.innerWidth >= 768 ? 'none' : 'block' }}
-        styles={{
-          body: { padding: token.paddingLG }
-        }}
-      >
-        {user ? (
-          <div>
-            {/* User Info Card */}
-            <div style={{
-              background: 'linear-gradient(135deg, #e6f7ff 0%, #f9f0ff 100%)',
-              borderRadius: token.borderRadiusLG,
-              padding: token.paddingLG,
-              marginBottom: token.marginLG,
-              border: `1px solid ${token.colorBorder}`
-            }}>
-              <Space size="middle">
-                <Avatar
-                  icon={<UserOutlined />}
-                  size="large"
-                  style={{
-                    background: 'linear-gradient(135deg, #ffa940 0%, #ff7875 100%)',
-                    color: 'white'
-                  }}
-                />
-                <div>
-                  <div style={{ fontWeight: 500, marginBottom: 4 }}>
-                    <Space size="small">
-                      <span>{user.role === 'admin' ? '👑' : '👤'}</span>
-                      <span>{user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</span>
-                    </Space>
-                  </div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {user.email}
-                  </Text>
-                </div>
-              </Space>
-            </div>
-
-            <Divider style={{ margin: `${token.marginLG}px 0` }} />
-
-            {/* Menu Items */}
-            <Menu
-              mode="vertical"
-              style={{ 
-                border: 'none',
-                backgroundColor: 'transparent'
-              }}
-              items={user.role === 'admin' ? adminMenuItems : userMenuItems}
-            />
-          </div>
-        ) : (
-          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-            <Button
-              icon={<LoginOutlined />}
-              onClick={() => navigate('/login')}
-              size="large"
-              style={{ 
-                width: '100%',
-                borderRadius: token.borderRadiusLG,
-                height: 48
-              }}
-            >
-              Đăng nhập
-            </Button>
-            <Button
-              type="primary"
-              icon={<UserAddOutlined />}
-              onClick={() => navigate('/register')}
-              size="large"
-              style={{ 
-                width: '100%',
-                background: 'linear-gradient(135deg, #ff7875 0%, #f759ab 100%)',
-                borderColor: 'transparent',
-                borderRadius: token.borderRadiusLG,
-                height: 48
-              }}
-            >
-              Đăng ký
-            </Button>
-          </Space>
-        )}
-      </Drawer>
 
       <style jsx global>{`
         .ant-layout-header {
