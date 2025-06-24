@@ -243,7 +243,8 @@ const Header = () => {
           justifyContent: 'center',
           alignItems: 'center',
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          height: 64
+          height: 64,
+          padding: '0 16px'
         }}
       >
         <Spin size="small" style={{ color: 'white' }} />
@@ -377,9 +378,8 @@ const Header = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: `0 ${token.paddingLG}px`,
+          padding: '0 16px',
           height: 64,
-          lineHeight: '64px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
           position: 'sticky',
           top: 0,
@@ -388,52 +388,233 @@ const Header = () => {
           border: 'none'
         }}
       >
-        {/* Logo and Title */}
-        <Space 
-          size="large"
+        {/* Logo and Title - Fixed overflow */}
+        <div
           style={{ 
             color: 'white',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
+            display: 'flex',
             alignItems: 'center',
-            height: '64px',
-            lineHeight: '64px'
+            gap: '12px',
+            minWidth: 0,
+            flex: '0 0 auto',
+            maxWidth: '350px'
           }}
           onClick={() => navigate('/home')}
           className="hover-scale"
-        >
-          <div style={{ fontSize: 28, lineHeight: 1 }}>🦆</div>
-          <div>
+        > 
+          {/* Logo */}
+          <div style={{
+            width: '48px',
+            height: '48px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            border: '2px solid rgba(255,255,255,0.2)',
+            flexShrink: 0,
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Quiz document icon */}
+            <div style={{
+              width: '28px',
+              height: '28px',
+              position: 'relative'
+            }}>
+              {/* Document background */}
+              <div style={{
+                position: 'absolute',
+                top: '2px',
+                left: '4px',
+                width: '20px',
+                height: '24px',
+                backgroundColor: 'white',
+                borderRadius: '2px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+              }}></div>
+              
+              {/* Document lines (quiz questions) */}
+              <div style={{
+                position: 'absolute',
+                top: '6px',
+                left: '6px',
+                width: '4px',
+                height: '2px',
+                backgroundColor: '#667eea',
+                borderRadius: '1px'
+              }}></div>
+              <div style={{
+                position: 'absolute',
+                top: '6px',
+                left: '12px',
+                width: '8px',
+                height: '2px',
+                backgroundColor: '#e0e0e0',
+                borderRadius: '1px'
+              }}></div>
+              
+              <div style={{
+                position: 'absolute',
+                top: '10px',
+                left: '6px',
+                width: '4px',
+                height: '2px',
+                backgroundColor: '#52c41a',
+                borderRadius: '1px'
+              }}></div>
+              <div style={{
+                position: 'absolute',
+                top: '10px',
+                left: '12px',
+                width: '8px',
+                height: '2px',
+                backgroundColor: '#e0e0e0',
+                borderRadius: '1px'
+              }}></div>
+              
+              <div style={{
+                position: 'absolute',
+                top: '14px',
+                left: '6px',
+                width: '4px',
+                height: '2px',
+                backgroundColor: '#ff4d4f',
+                borderRadius: '1px'
+              }}></div>
+              <div style={{
+                position: 'absolute',
+                top: '14px',
+                left: '12px',
+                width: '8px',
+                height: '2px',
+                backgroundColor: '#e0e0e0',
+                borderRadius: '1px'
+              }}></div>
+              
+              <div style={{
+                position: 'absolute',
+                top: '18px',
+                left: '6px',
+                width: '4px',
+                height: '2px',
+                backgroundColor: '#faad14',
+                borderRadius: '1px'
+              }}></div>
+              <div style={{
+                position: 'absolute',
+                top: '18px',
+                left: '12px',
+                width: '8px',
+                height: '2px',
+                backgroundColor: '#e0e0e0',
+                borderRadius: '1px'
+              }}></div>
+
+              {/* Question mark overlay */}
+              <div style={{
+                position: 'absolute',
+                top: '0px',
+                right: '0px',
+                width: '12px',
+                height: '12px',
+                backgroundColor: '#1890ff',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                border: '1px solid white'
+              }}>
+                <div style={{
+                  color: 'white',
+                  fontSize: '8px',
+                  fontWeight: 'bold',
+                  lineHeight: '1'
+                }}>?</div>
+              </div>
+              
+              {/* Check mark for completed */}
+              <div style={{
+                position: 'absolute',
+                bottom: '0px',
+                right: '0px',
+                width: '10px',
+                height: '10px',
+                backgroundColor: '#52c41a',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid white'
+              }}>
+                <div style={{
+                  color: 'white',
+                  fontSize: '6px',
+                  fontWeight: 'bold',
+                  lineHeight: '1'
+                }}>✓</div>
+              </div>
+            </div>
+            
+            {/* Shine effect */}
+            <div style={{
+              position: 'absolute',
+              top: '-50%',
+              left: '-50%',
+              width: '200%',
+              height: '200%',
+              background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
+              transform: 'rotate(45deg)',
+              animation: 'shine 4s infinite'
+            }}></div>
+          </div>
+
+          {/* Title and Subtitle */}
+          <div style={{ minWidth: 0, flex: 1 }}>
             <Title 
               level={4} 
               style={{ 
                 color: 'white', 
                 margin: 0, 
                 fontWeight: 700,
-                letterSpacing: '0.5px'
+                letterSpacing: '0.5px',
+                lineHeight: '1.2',
+                fontSize: '22px',
+                textShadow: '0 2px 4px rgba(0,0,0,0.2)'
               }}
             >
-              DuckMen Quiz
+              QuizPro
             </Title>
             <Text 
               style={{ 
                 color: 'rgba(255, 255, 255, 0.8)', 
-                fontSize: 12
+                fontSize: '11px',
+                lineHeight: '1.2',
+                display: 'block',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                textShadow: '0 1px 2px rgba(0,0,0,0.1)'
               }}
             >
               Hệ thống thi trắc nghiệm thông minh
             </Text>
           </div>
-        </Space>
+        </div>
 
-        {/* Right Navigation */}
+        {/* Right Navigation - Responsive */}
         <div style={{ 
           display: 'flex',
           alignItems: 'center',
-          height: '64px'
+          flex: '0 0 auto',
+          minWidth: 0
         }}>
           {user ? (
-            <Space size="large">
+            <Space size="middle">
               {/* Notifications */}
               <Badge 
                 count={unreadNotifications} 
@@ -443,12 +624,14 @@ const Header = () => {
                 <Button
                   type="text"
                   icon={<BellOutlined />}
-                  size="large"
+                  size="middle"
                   style={{
                     color: 'white',
                     border: 'none',
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    transition: 'all 0.3s ease'
+                    transition: 'all 0.3s ease',
+                    width: '36px',
+                    height: '36px'
                   }}
                   onClick={() => navigate('/notifications')}
                   onMouseEnter={(e) => {
@@ -460,19 +643,24 @@ const Header = () => {
                 />
               </Badge>
 
-              {/* User Dropdown */}
+              {/* User Dropdown - Responsive */}
               <Dropdown
                 menu={userDropdownMenu}
                 placement="bottomRight"
                 trigger={['click']}
               >
-                <Space 
+                <div
                   style={{
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     borderRadius: token.borderRadiusLG,
-                    padding: `${token.paddingXS}px ${token.paddingSM}px`
+                    padding: '4px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    minWidth: 0,
+                    maxWidth: '200px'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
@@ -484,46 +672,60 @@ const Header = () => {
                   <Avatar
                     src={user.avatar}
                     icon={!user.avatar && <UserOutlined />}
-                    size="large"
+                    size="default"
                     style={{
                       background: user.avatar ? 'transparent' : 'linear-gradient(135deg, #ffa940 0%, #ff7875 100%)',
                       color: 'white',
-                      boxShadow: token.boxShadow
+                      boxShadow: token.boxShadow,
+                      flexShrink: 0
                     }}
                   />
-                  <div style={{ color: 'white', textAlign: 'left' }}>
-                    <div style={{ fontSize: 14, fontWeight: 500 }}>
-                      <Space size="small">
-                        <span>{user.role === 'admin' ? '👑' : '👤'}</span>
-                        <span>{user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</span>
-                      </Space>
-                    </div>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 12 }}>
+                  <div style={{ 
+                    color: 'white', 
+                    textAlign: 'left',
+                    minWidth: 0,
+                    overflow: 'hidden'
+                  }}>
+                    <Text style={{ 
+                      color: 'rgba(255, 255, 255, 0.9)', 
+                      fontSize: '12px',
+                      display: 'block',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      lineHeight: '1.2'
+                    }}>
                       {user.email}
                     </Text>
                     {userStats.totalTests > 0 && (
-                      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11, display: 'block' }}>
-                        Đã làm {userStats.totalTests} bài thi
-                        {isStatsLoading && <Spin size="small" style={{ marginLeft: 8 }} />}
+                      <Text style={{ 
+                        color: 'rgba(255, 255, 255, 0.6)', 
+                        fontSize: '10px', 
+                        display: 'block',
+                        lineHeight: '1.2',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {userStats.totalTests} bài thi
+                        {isStatsLoading && <Spin size="small" style={{ marginLeft: 4 }} />}
                       </Text>
                     )}
                   </div>
-                </Space>
+                </div>
               </Dropdown>
             </Space>
           ) : (
-            <Space size="middle">
+            <Space size="small">
               <Button
                 icon={<LoginOutlined />}
                 onClick={() => navigate('/login')}
-                size="large"
+                size="middle"
                 style={{
                   color: 'white',
                   borderColor: 'rgba(255, 255, 255, 0.5)',
                   backgroundColor: 'transparent',
                   borderRadius: token.borderRadiusLG,
-                  paddingLeft: token.paddingLG,
-                  paddingRight: token.paddingLG,
+                  fontSize: '12px',
+                  height: '32px',
                   transition: 'all 0.3s ease'
                 }}
                 onMouseEnter={(e) => {
@@ -541,13 +743,13 @@ const Header = () => {
                 type="primary"
                 icon={<UserAddOutlined />}
                 onClick={() => navigate('/register')}
-                size="large"
+                size="middle"
                 style={{
                   background: 'linear-gradient(135deg, #ff7875 0%, #f759ab 100%)',
                   borderColor: 'transparent',
                   borderRadius: token.borderRadiusLG,
-                  paddingLeft: token.paddingLG,
-                  paddingRight: token.paddingLG,
+                  fontSize: '12px',
+                  height: '32px',
                   boxShadow: token.boxShadow,
                   transition: 'all 0.3s ease'
                 }}
@@ -574,7 +776,7 @@ const Header = () => {
           height: 64px !important;
         }
         .hover-scale:hover {
-          transform: scale(1.05);
+          transform: scale(1.02);
         }
         body {
           margin: 0;
@@ -582,6 +784,32 @@ const Header = () => {
         }
         .ant-layout {
           background: transparent;
+        }
+        
+        /* Logo shine animation */
+        @keyframes shine {
+          0% {
+            transform: translateX(-100%) translateY(-100%) rotate(45deg);
+          }
+          50% {
+            transform: translateX(100%) translateY(100%) rotate(45deg);
+          }
+          100% {
+            transform: translateX(-100%) translateY(-100%) rotate(45deg);
+          }
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .ant-layout-header {
+            padding: 0 8px !important;
+          }
+        }
+        
+        @media (max-width: 576px) {
+          .ant-layout-header {
+            padding: 0 4px !important;
+          }
         }
       `}</style>
     </>

@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const authRoutes = require('../routes/authRoutes');
+const questionRoutes  = require('../routes/questions')
 const cors = require('cors')
 require('dotenv').config();
 // Tạo server
@@ -14,6 +15,7 @@ server.use(cors({
 
 server.use(express.json());
 server.use('/api/auth', authRoutes);
+server.use('/api/questions', questionRoutes);
 
 mongoose.connect(process.env.MONGO_URI)
 

@@ -5,6 +5,7 @@ const HomePage = () => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -50,51 +51,68 @@ const HomePage = () => {
           <p>Vai trò: {user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</p>
         </div>
       </div>
-      
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-        <div style={{ 
-          padding: '20px', 
-          border: '1px solid #ddd', 
+        <div style={{
+          padding: '20px',
+          border: '1px solid #ddd',
           borderRadius: '8px',
-          backgroundColor: '#f8f9fa'
+          backgroundColor: '#f8f9fa',
+           cursor: 'pointer'
+        }}>
+          <h3>Ôn tập</h3>
+          <p>Quản lý các câu hỏi ôn tập của bạn</p>
+          <button  onClick={() => navigate('/questions')} style={{ padding: '8px 16px', backgroundColor: '#fd7e14', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>
+            Xem các câu hỏi
+          </button>
+        </div>
+        <div style={{
+          padding: '20px',
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          backgroundColor: '#f8f9fa',
+           cursor: 'pointer'
         }}>
           <h3>Bài thi</h3>
           <p>Truy cập các bài thi có sẵn</p>
-          <button style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}>
+          <button style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>
             Xem bài thi
           </button>
         </div>
-        
-        <div style={{ 
-          padding: '20px', 
-          border: '1px solid #ddd', 
+
+        <div style={{
+          padding: '20px',
+          border: '1px solid #ddd',
           borderRadius: '8px',
-          backgroundColor: '#f8f9fa'
+          backgroundColor: '#f8f9fa',
+           cursor: 'pointer'
         }}>
           <h3>Lớp học</h3>
           <p>Quản lý các lớp học của bạn</p>
-          <button style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px' }}>
+          <button style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
             Xem lớp học
           </button>
         </div>
-        
-        <div style={{ 
-          padding: '20px', 
-          border: '1px solid #ddd', 
+
+
+        <div style={{
+          padding: '20px',
+          border: '1px solid #ddd',
           borderRadius: '8px',
-          backgroundColor: '#f8f9fa'
+          backgroundColor: '#f8f9fa',
+           cursor: 'pointer'
         }}>
           <h3>Lịch sử</h3>
           <p>Xem kết quả bài thi đã làm</p>
-          <button style={{ padding: '8px 16px', backgroundColor: '#ffc107', color: 'black', border: 'none', borderRadius: '4px' }}>
+          <button style={{ padding: '8px 16px', backgroundColor: '#ffc107', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
             Xem lịch sử
           </button>
         </div>
-        
+
         {user.role === 'admin' && (
-          <div style={{ 
-            padding: '20px', 
-            border: '1px solid #ddd', 
+          <div style={{
+            padding: '20px',
+            border: '1px solid #ddd',
             borderRadius: '8px',
             backgroundColor: '#fff3cd'
           }}>

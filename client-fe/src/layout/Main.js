@@ -9,6 +9,7 @@ import LoginPage from '../pages/LoginPage';
 import PrivateRoute from '../pages/PrivateRoute';
 import ForgotPasswordPage from '../pages/ForgetPassword';
 import Emty from '../pages/Emty';
+import QuestionsPage from '../pages/QuestionsPage'
 
 const Main = () => {
   return (
@@ -77,6 +78,7 @@ const Main = () => {
           path="/" 
           element={<AuthRedirect />} 
         />
+        <Route path="/questions" element={<QuestionsPage />} />
         
         {/* 404 route */}
         <Route path="*" element={<Navigate to="/" replace />} />
