@@ -5,7 +5,6 @@ const HomePage = () => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -35,90 +34,101 @@ const HomePage = () => {
     navigate('/login');
   };
 
-  if (isLoading) {
-    return <div>Đang tải...</div>;
-  }
-
-  if (!user) {
-    return null; // Component sẽ redirect đến login
-  }
+  if (isLoading) return <div>Đang tải...</div>;
+  if (!user) return null;
 
   return (
     <div style={{ padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px'
+      }}>
         <div>
           <h2>👋 Xin chào, {user.email}</h2>
           <p>Vai trò: {user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</p>
         </div>
+        <button
+          onClick={handleLogout}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#dc3545',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px'
+          }}
+        >
+          Đăng xuất
+        </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-        <div style={{
-          padding: '20px',
-          border: '1px solid #ddd',
-          borderRadius: '8px',
-          backgroundColor: '#f8f9fa',
-           cursor: 'pointer'
-        }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '20px'
+      }}>
+        <div style={cardStyle}>
           <h3>Ôn tập</h3>
           <p>Quản lý các câu hỏi ôn tập của bạn</p>
-          <button  onClick={() => navigate('/questions')} style={{ padding: '8px 16px', backgroundColor: '#fd7e14', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>
+          <button
+            onClick={() => navigate('/questions')}
+            style={buttonStyle('#fd7e14')}
+          >
             Xem các câu hỏi
           </button>
         </div>
-        <div style={{
-          padding: '20px',
-          border: '1px solid #ddd',
-          borderRadius: '8px',
-          backgroundColor: '#f8f9fa',
-           cursor: 'pointer'
-        }}>
+
+        <div style={cardStyle}>
           <h3>Bài thi</h3>
           <p>Truy cập các bài thi có sẵn</p>
-          <button style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>
+          <button
+            onClick={() => navigate('/exams')}
+            style={buttonStyle('#007bff')}
+          >
             Xem bài thi
           </button>
         </div>
 
-        <div style={{
-          padding: '20px',
-          border: '1px solid #ddd',
-          borderRadius: '8px',
-          backgroundColor: '#f8f9fa',
-           cursor: 'pointer'
-        }}>
+        <div style={cardStyle}>
           <h3>Lớp học</h3>
           <p>Quản lý các lớp học của bạn</p>
-          <button style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-            Xem lớp học
+          <button
+            onClick={() => {
+              if (user.role === 'admin') {
+                navigate('/admin/classes');
+              } else {
+                navigate('/join-class');
+              }
+            }}
+            style={buttonStyle('#28a745')}
+          >
+            {user.role === 'admin' ? 'Xem lớp học' : 'Tham gia lớp'}
           </button>
         </div>
 
-
-        <div style={{
-          padding: '20px',
-          border: '1px solid #ddd',
-          borderRadius: '8px',
-          backgroundColor: '#f8f9fa',
-           cursor: 'pointer'
-        }}>
+        <div style={cardStyle}>
           <h3>Lịch sử</h3>
           <p>Xem kết quả bài thi đã làm</p>
-          <button style={{ padding: '8px 16px', backgroundColor: '#ffc107', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+          <button
+            onClick={() => navigate('/history')}
+            style={buttonStyle('#ffc107', 'black')}
+          >
             Xem lịch sử
           </button>
         </div>
 
         {user.role === 'admin' && (
           <div style={{
-            padding: '20px',
-            border: '1px solid #ddd',
-            borderRadius: '8px',
+            ...cardStyle,
             backgroundColor: '#fff3cd'
           }}>
             <h3>Quản trị</h3>
             <p>Các chức năng dành cho admin</p>
-            <button style={{ padding: '8px 16px', backgroundColor: '#6f42c1', color: 'white', border: 'none', borderRadius: '4px' }}>
+            <button
+              onClick={() => navigate('/admin')}
+              style={buttonStyle('#6f42c1')}
+            >
               Trang quản trị
             </button>
           </div>
@@ -127,5 +137,23 @@ const HomePage = () => {
     </div>
   );
 };
+
+// ✅ Styles helper
+const cardStyle = {
+  padding: '20px',
+  border: '1px solid #ddd',
+  borderRadius: '8px',
+  backgroundColor: '#f8f9fa',
+  cursor: 'pointer'
+};
+
+const buttonStyle = (bgColor, color = 'white') => ({
+  padding: '8px 16px',
+  backgroundColor: bgColor,
+  color: color,
+  border: 'none',
+  borderRadius: '4px',
+  cursor: 'pointer'
+});
 
 export default HomePage;

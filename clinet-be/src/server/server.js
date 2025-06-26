@@ -2,6 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const authRoutes = require('../routes/authRoutes');
 const questionRoutes  = require('../routes/questions')
+const adminRoutes = require('../routes/AdminCreateClass');
+const joinClassRoute = require('../routes/joinClassRoute');
 const cors = require('cors')
 require('dotenv').config();
 // Tạo server
@@ -16,12 +18,14 @@ server.use(cors({
 server.use(express.json());
 server.use('/api/auth', authRoutes);
 server.use('/api/questions', questionRoutes);
+server.use('/api/classes', adminRoutes);
+server.use('/api/join-class', joinClassRoute); 
 
 mongoose.connect(process.env.MONGO_URI)
 
 .then(() => {
     console.log('MongoDB connected');
-    server.listen(9999, () => console.log('Server running on port 9999'));
+
 })
 .catch(err => console.error('DB error:', err));
 const PORT = 9999 || process.env.PORT;
