@@ -13,6 +13,7 @@ module.exports = (requireAdmin = false) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('Middleware decoded token:', decoded); // 👉 THÊM DÒNG NÀY
 
       // Kiểm tra payload có userId không
       if (!decoded.userId) {

@@ -27,9 +27,9 @@ router.post('/', authMiddleware(), async (req, res) => {
 router.get('/', authMiddleware(), async (req, res) => {
   try {
     const userId = req.user.id;
-   
+
     const classes = await Class.find({ createdBy: userId })
-      .populate('students', 'email') 
+      .populate('students', 'email')
       .sort({ createdAt: -1 });
     res.json(classes);
   } catch (err) {

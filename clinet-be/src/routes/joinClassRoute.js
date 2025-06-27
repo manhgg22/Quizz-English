@@ -26,5 +26,17 @@ router.post('/', authMiddleware(), async (req, res) => {
     res.status(500).json({ message: 'Lỗi server' });
   }
 });
+router.get('/', authMiddleware(), async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const joinedClasses = await Class.find({ students: userId }).select('name code');
+
+    res.json(joinedClasses);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi server khi lấy danh sách lớp' });
+  }
+});
 
 module.exports = router;

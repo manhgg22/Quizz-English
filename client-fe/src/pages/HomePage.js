@@ -111,7 +111,7 @@ const HomePage = () => {
           <h3>Lịch sử</h3>
           <p>Xem kết quả bài thi đã làm</p>
           <button
-            onClick={() => navigate('/history')}
+            onClick={() => navigate('/user/results')}
             style={buttonStyle('#ffc107', 'black')}
           >
             Xem lịch sử

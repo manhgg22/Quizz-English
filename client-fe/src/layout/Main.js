@@ -12,6 +12,9 @@ import Emty from '../pages/Emty';
 import QuestionsPage from '../pages/QuestionsPage'
 import AdminCreateClass from '../pages/AdminCreateClass';
 import JoinClass from '../pages/JoinClass';
+import CreatePracticeQuestion from '../pages/CreatePracticeQuestion';
+import EnterPracticeExam from '../pages/EnterPracticeExam';
+import PracticeResults from '../pages/PracticeResults';
 
 const Main = () => {
   return (
@@ -21,10 +24,10 @@ const Main = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        
+
         {/* Empty/Landing page */}
         <Route path="/welcome" element={<Emty />} />
-        
+
         {/* Protected routes */}
         <Route
           path="/home"
@@ -43,10 +46,10 @@ const Main = () => {
           }
         />
         <Route
-          path="/exams"
+          path="/admin/exams"
           element={
             <PrivateRoute>
-              <ExamPage />
+              <CreatePracticeQuestion />
             </PrivateRoute>
           }
         />
@@ -65,25 +68,35 @@ const Main = () => {
               <ClassPage />
             </PrivateRoute>
           }
+
         />
         <Route
           path="/user/results"
           element={
             <PrivateRoute>
-              <HistoryPage />
+              < PracticeResults />
             </PrivateRoute>
           }
         />
-        
+        <Route
+          path="/exams"
+          element={
+            <PrivateRoute>
+              <EnterPracticeExam />
+            </PrivateRoute>
+          }
+        />
+
+
         {/* Root redirect - check authentication */}
-        <Route 
-          path="/" 
-          element={<AuthRedirect />} 
+        <Route
+          path="/"
+          element={<AuthRedirect />}
         />
         <Route path="/questions" element={<QuestionsPage />} />
-         <Route path="/admin/classes" element={<AdminCreateClass />} />
-         <Route path="/join-class" element={<JoinClass />} />
-        
+        <Route path="/admin/classes" element={<AdminCreateClass />} />
+        <Route path="/join-class" element={<JoinClass />} />
+
         {/* 404 route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -95,7 +108,7 @@ const Main = () => {
 const AuthRedirect = () => {
   const token = localStorage.getItem('token');
   const userData = localStorage.getItem('user');
-  
+
   // If user is authenticated, redirect to home
   if (token && userData) {
     try {
@@ -108,7 +121,7 @@ const AuthRedirect = () => {
       return <Navigate to="/login" replace />;
     }
   }
-  
+
   // If not authenticated, redirect to login
   return <Navigate to="/login" replace />;
 };

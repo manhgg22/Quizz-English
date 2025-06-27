@@ -1,0 +1,109 @@
+const express = require('express');
+const router = express.Router();
+const PracticeQuestion = require('../models/PracticeQuestion');
+const PracticeResult = require('../models/PracticeResult'); // ✅ NEW
+const authMiddleware = require('../middleware/authMiddleware');
+
+// ✅ [1] Admin tạo câu hỏi ôn tập
+router.post('/', authMiddleware(true), async (req, res) => {
+  try {
+    const { topic, question, options, correctAnswer, examCode } = req.body;
+
+    if (!examCode || !question || !correctAnswer || !options || !topic) {
+      return res.status(400).json({ message: 'Thiếu thông tin câu hỏi' });
+    }
+
+    const newQuestion = await PracticeQuestion.create({
+      topic,
+      question,
+      options,
+      correctAnswer,
+      examCode
+    });
+
+    res.status(201).json(newQuestion);
+  } catch (err) {
+    console.error('Lỗi tạo câu hỏi ôn tập:', err);
+    res.status(500).json({ message: 'Tạo câu hỏi ôn tập thất bại' });
+  }
+});
+
+// ✅ [2] User lấy danh sách câu hỏi bằng examCode
+router.get('/access', authMiddleware(), async (req, res) => {
+  try {
+    const { examCode } = req.query;
+
+    if (!examCode) {
+      return res.status(400).json({ message: 'Thiếu examCode' });
+    }
+
+    const questions = await PracticeQuestion.find({ examCode });
+
+    if (questions.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy câu hỏi' });
+    }
+
+    // ✅ Ẩn đáp án đúng khi trả về cho học sinh
+    const safeQuestions = questions.map(q => ({
+      _id: q._id,
+      topic: q.topic,
+      question: q.question,
+      options: q.options
+    }));
+
+    res.json(safeQuestions);
+  } catch (err) {
+    console.error('Lỗi lấy câu hỏi:', err);
+    res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+});
+
+// ✅ [3] User nộp bài & chấm điểm
+router.post('/submit', authMiddleware(), async (req, res) => {
+  try {
+    const { examCode, answers } = req.body;
+    const userId = req.user.id;
+
+    if (!examCode || !Array.isArray(answers)) {
+      return res.status(400).json({ message: 'Thiếu dữ liệu nộp bài' });
+    }
+
+    const questions = await PracticeQuestion.find({ examCode });
+    if (questions.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy bài luyện tập' });
+    }
+
+    let correctCount = 0;
+
+    questions.forEach((q) => {
+      const userAnswer = answers.find(a => a.questionId === q._id.toString());
+      if (userAnswer && userAnswer.answer === q.correctAnswer) {
+        correctCount++;
+      }
+    });
+
+    const total = questions.length;
+    const score = (correctCount / total) * 10;
+
+    // ✅ Lưu kết quả vào MongoDB
+    const result = await PracticeResult.create({
+      userId,
+      examCode,
+      correct: correctCount,
+      total,
+      score: Number(score.toFixed(2))
+    });
+
+    res.json({
+      message: 'Nộp bài thành công',
+      correct: correctCount,
+      total,
+      score: result.score
+    });
+  } catch (err) {
+    console.error('Lỗi khi nộp bài luyện tập:', err);
+    res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+});
+
+module.exports = router;
