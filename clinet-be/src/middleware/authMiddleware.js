@@ -1,7 +1,4 @@
-// src/middleware/authMiddleware.js
-
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 require('dotenv').config();
 
 module.exports = (requireAdmin = false) => {
@@ -16,16 +13,26 @@ module.exports = (requireAdmin = false) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.userId).select('-password');
-      if (!user) return res.status(401).json({ msg: 'User not found' });
 
-      if (requireAdmin && user.role !== 'admin') {
+      // Kiểm tra payload có userId không
+      if (!decoded.userId) {
+        return res.status(401).json({ msg: 'Invalid token payload' });
+      }
+
+      // Nếu yêu cầu là admin mà không phải admin → từ chối
+      if (requireAdmin && decoded.role !== 'admin') {
         return res.status(403).json({ msg: 'Admins only' });
       }
 
-      req.user = user;
+      // Lưu thông tin người dùng vào request
+      req.user = {
+        id: decoded.userId,
+        role: decoded.role
+      };
+
       next();
     } catch (err) {
+      console.error('AUTH ERROR:', err);
       return res.status(401).json({ msg: 'Invalid token' });
     }
   };

@@ -13,13 +13,14 @@ class JoinClass extends React.Component {
 
   handleJoinClass = async () => {
     try {
-      const res = await axios.post('/api/join-class', {
+      const res = await axios.post('http://localhost:9999/api/join-class', {
         code: this.state.code
       }, {
         headers: {
           Authorization: 'Bearer ' + localStorage.getItem('token')
         }
       });
+
 
       message.success('Tham gia lớp thành công');
       this.setState({ code: '' });
