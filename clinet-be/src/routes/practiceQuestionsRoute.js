@@ -7,7 +7,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 // ✅ [1] Admin tạo câu hỏi ôn tập
 router.post('/', authMiddleware(true), async (req, res) => {
   try {
-    const { topic, examCode, questions } = req.body;
+    const { topic, examCode, questions, duration } = req.body;
 
     if (!topic || !examCode || !Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({ message: 'Thiếu thông tin hoặc mảng câu hỏi không hợp lệ' });
@@ -26,6 +26,7 @@ router.post('/', authMiddleware(true), async (req, res) => {
     const formattedQuestions = questions.map(q => ({
       topic,
       examCode,
+      duration: duration || 10, // ✅ Thêm trường thời gian mặc định 10 phút nếu không truyền
       question: q.question,
       options: q.options,
       correctAnswer: q.correctAnswer
@@ -38,7 +39,8 @@ router.post('/', authMiddleware(true), async (req, res) => {
       message: `Tạo ${result.length} câu hỏi thành công`,
       count: result.length,
       examCode,
-      topic
+      topic,
+      duration: duration || 10
     });
   } catch (err) {
     console.error('Lỗi khi tạo nhiều câu hỏi ôn tập:', err);
@@ -47,6 +49,8 @@ router.post('/', authMiddleware(true), async (req, res) => {
 });
 
 
+
+// ✅ [2] User lấy danh sách câu hỏi bằng examCode
 // ✅ [2] User lấy danh sách câu hỏi bằng examCode
 router.get('/access', authMiddleware(), async (req, res) => {
   try {
@@ -54,6 +58,19 @@ router.get('/access', authMiddleware(), async (req, res) => {
 
     if (!examCode) {
       return res.status(400).json({ message: 'Thiếu examCode' });
+    }
+
+    // ✅ Kiểm tra user đã làm bài này chưa
+    const existingResult = await PracticeResult.findOne({ 
+      userId: req.user.id, 
+      examCode 
+    });
+
+    if (existingResult) {
+      return res.status(400).json({ 
+        message: 'Bạn đã hoàn thành bài thi này',
+        alreadySubmitted: true 
+      });
     }
 
     const questions = await PracticeQuestion.find({ examCode });
@@ -70,7 +87,16 @@ router.get('/access', authMiddleware(), async (req, res) => {
       options: q.options
     }));
 
-    res.json(safeQuestions);
+    // ✅ Trả về format mà frontend mong đợi
+    res.json({
+      questions: safeQuestions,
+      duration: questions[0]?.duration || 10, // Lấy duration từ câu hỏi đầu tiên
+      topic: questions[0]?.topic,
+      examCode: examCode,
+      totalQuestions: questions.length,
+      alreadySubmitted: false
+    });
+
   } catch (err) {
     console.error('Lỗi lấy câu hỏi:', err);
     res.status(500).json({ message: 'Lỗi máy chủ' });
@@ -122,6 +148,22 @@ router.post('/submit', authMiddleware(), async (req, res) => {
   } catch (err) {
     console.error('Lỗi khi nộp bài luyện tập:', err);
     res.status(500).json({ message: 'Lỗi máy chủ' });
+  }
+});
+// ✅ [4] User hủy bài thi
+router.post('/cancel', authMiddleware(), async (req, res) => {
+  try {
+    const { examCode } = req.body;
+    const userId = req.user.id;
+
+    // Có thể lưu log hủy bài hoặc đánh dấu
+    // const cancelLog = await PracticeCancelLog.create({ userId, examCode, canceledAt: new Date() });
+
+    res.json({ message: 'Bài thi đã được hủy' });
+
+  } catch (error) {
+    console.error('Lỗi hủy bài:', error);
+    res.status(500).json({ message: 'Lỗi server' });
   }
 });
 

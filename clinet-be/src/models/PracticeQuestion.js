@@ -6,8 +6,16 @@ const practiceQuestionSchema = new mongoose.Schema({
   question: String,
   options: [String],
   correctAnswer: String,
-  examCode: { type: String, required: true }, 
-  createdAt: { type: Date, default: Date.now }
+  examCode: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  // ✅ Thêm thời gian (phút)
+  duration: {
+    type: Number, // đơn vị phút
+    default: 10   // nếu không chọn thì mặc định 10 phút
+  }
 });
 
 module.exports = mongoose.model('PracticeQuestion', practiceQuestionSchema);
