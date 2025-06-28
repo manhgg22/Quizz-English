@@ -12,6 +12,7 @@ const EnterPracticeExam = () => {
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState(null);
 
+  // 🟦 Lấy danh sách câu hỏi theo examCode
   const fetchQuestions = async () => {
     if (!examCode.trim()) {
       return message.warning('Vui lòng nhập mã examCode');
@@ -29,6 +30,7 @@ const EnterPracticeExam = () => {
       setTopic(res.data[0]?.topic || '');
       setSubmitted(false);
       setResult(null);
+      setAnswers({});
       message.success('Lấy đề thi thành công!');
     } catch (err) {
       console.error(err);
@@ -37,19 +39,23 @@ const EnterPracticeExam = () => {
     }
   };
 
+  // 🟦 Xử lý chọn đáp án
   const handleSelect = (questionId, selectedOption) => {
     setAnswers(prev => ({ ...prev, [questionId]: selectedOption }));
   };
 
+  // 🟦 Nộp bài
   const handleSubmit = async () => {
-    if (Object.keys(answers).length !== questions.length) {
-      return message.warning('Bạn chưa trả lời đầy đủ tất cả câu hỏi');
+    const unanswered = questions.filter(q => !answers[q._id]);
+    if (unanswered.length > 0) {
+      const missingList = unanswered.map((q, i) => `Câu ${i + 1}`).join(', ');
+      return message.warning(`Bạn chưa trả lời đầy đủ: ${missingList}`);
     }
 
     try {
-      const formattedAnswers = Object.keys(answers).map(id => ({
-        questionId: id,
-        answer: answers[id]
+      const formattedAnswers = questions.map(q => ({
+        questionId: q._id,
+        answer: answers[q._id]
       }));
 
       const res = await axios.post('http://localhost:9999/api/practice-questions/submit', {
@@ -63,7 +69,7 @@ const EnterPracticeExam = () => {
 
       setResult(res.data);
       setSubmitted(true);
-      message.success('Nộp bài thành công!');
+      message.success('🎉 Nộp bài thành công!');
     } catch (err) {
       console.error(err);
       message.error('Lỗi khi nộp bài');
@@ -85,6 +91,7 @@ const EnterPracticeExam = () => {
       {questions.length > 0 && (
         <div style={{ marginTop: 24 }}>
           <Title level={4}>Chủ đề: {topic}</Title>
+
           {questions.map((q, index) => (
             <div key={q._id} style={{ marginBottom: 20 }}>
               <strong>Câu {index + 1}:</strong> {q.question}
@@ -110,8 +117,8 @@ const EnterPracticeExam = () => {
 
           {result && (
             <div style={{ marginTop: 24 }}>
-              <Title level={4}>🎉 Kết quả</Title>
-              <p>✅ Đúng: {result.correct}/{result.total}</p>
+              <Title level={4}>🎯 Kết quả</Title>
+              <p>✅ Số câu đúng: {result.correct}/{result.total}</p>
               <p>📝 Điểm: {result.score}/10</p>
             </div>
           )}

@@ -7,26 +7,29 @@ const HomePage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
+  const token = localStorage.getItem('token');
+  const userData = localStorage.getItem('user');
 
-    if (!token || !userData) {
-      navigate('/login');
-      return;
-    }
+  if (!token || !userData) {
+    navigate('/login');
+    return;
+  }
 
-    try {
-      const userObj = JSON.parse(userData);
-      setUser(userObj);
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      navigate('/login');
-    } finally {
-      setIsLoading(false);
+  try {
+    const userObj = JSON.parse(userData);
+    if (userObj.role === 'admin') {
+      navigate('/admin/home'); // 👉 Chuyển admin sang trang riêng
+    } else {
+      setUser(userObj); // Chỉ gán user thường
     }
-  }, [navigate]);
+  } catch (error) {
+    localStorage.clear();
+    navigate('/login');
+  } finally {
+    setIsLoading(false);
+  }
+}, [navigate]);
+
 
   const handleLogout = () => {
     localStorage.removeItem('token');

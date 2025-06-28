@@ -7,26 +7,45 @@ const authMiddleware = require('../middleware/authMiddleware');
 // ✅ [1] Admin tạo câu hỏi ôn tập
 router.post('/', authMiddleware(true), async (req, res) => {
   try {
-    const { topic, question, options, correctAnswer, examCode } = req.body;
+    const { topic, examCode, questions } = req.body;
 
-    if (!examCode || !question || !correctAnswer || !options || !topic) {
-      return res.status(400).json({ message: 'Thiếu thông tin câu hỏi' });
+    if (!topic || !examCode || !Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({ message: 'Thiếu thông tin hoặc mảng câu hỏi không hợp lệ' });
     }
 
-    const newQuestion = await PracticeQuestion.create({
-      topic,
-      question,
-      options,
-      correctAnswer,
-      examCode
-    });
+    // Kiểm tra từng câu hỏi có đủ dữ liệu
+    const invalid = questions.some(q =>
+      !q.question || !q.correctAnswer || !Array.isArray(q.options) || q.options.length !== 4
+    );
 
-    res.status(201).json(newQuestion);
+    if (invalid) {
+      return res.status(400).json({ message: 'Một số câu hỏi thiếu thông tin hoặc không hợp lệ' });
+    }
+
+    // Chuẩn hóa từng câu hỏi trước khi insert
+    const formattedQuestions = questions.map(q => ({
+      topic,
+      examCode,
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.correctAnswer
+    }));
+
+    // Thêm tất cả câu hỏi vào DB
+    const result = await PracticeQuestion.insertMany(formattedQuestions);
+
+    res.status(201).json({
+      message: `Tạo ${result.length} câu hỏi thành công`,
+      count: result.length,
+      examCode,
+      topic
+    });
   } catch (err) {
-    console.error('Lỗi tạo câu hỏi ôn tập:', err);
+    console.error('Lỗi khi tạo nhiều câu hỏi ôn tập:', err);
     res.status(500).json({ message: 'Tạo câu hỏi ôn tập thất bại' });
   }
 });
+
 
 // ✅ [2] User lấy danh sách câu hỏi bằng examCode
 router.get('/access', authMiddleware(), async (req, res) => {

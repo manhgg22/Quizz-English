@@ -15,6 +15,7 @@ import JoinClass from '../pages/JoinClass';
 import CreatePracticeQuestion from '../pages/CreatePracticeQuestion';
 import EnterPracticeExam from '../pages/EnterPracticeExam';
 import PracticeResults from '../pages/PracticeResults';
+import AdminHomePage from '../pages/AdminHomePage';
 
 const Main = () => {
   return (
@@ -86,6 +87,14 @@ const Main = () => {
             </PrivateRoute>
           }
         />
+        <Route
+  path="/admin/home"
+  element={
+    <PrivateRoute>
+      <AdminHomePage />
+    </PrivateRoute>
+  }
+  />
 
 
         {/* Root redirect - check authentication */}
