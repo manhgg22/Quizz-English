@@ -46,7 +46,7 @@ const login = async (req, res) => {
         role: user.role || 'admin' // nếu Admin không có trường role
       },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '10h' }
     );
 
     res.json({

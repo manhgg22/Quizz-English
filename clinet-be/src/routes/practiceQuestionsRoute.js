@@ -50,8 +50,7 @@ router.post('/', authMiddleware(true), async (req, res) => {
 
 
 
-// ✅ [2] User lấy danh sách câu hỏi bằng examCode
-// ✅ [2] User lấy danh sách câu hỏi bằng examCode
+
 router.get('/access', authMiddleware(), async (req, res) => {
   try {
     const { examCode } = req.query;
@@ -166,5 +165,70 @@ router.post('/cancel', authMiddleware(), async (req, res) => {
     res.status(500).json({ message: 'Lỗi server' });
   }
 });
+// ✅ [5] Admin lấy tất cả đề ôn tập (group theo examCode)
+router.get('/', authMiddleware(), async (req, res) => {
+  try {
+    const isAdmin = req.user.role === 'admin';
+
+    const { examCode } = req.query;
+
+    if (examCode) {
+      // 👩‍🎓 Học sinh truy cập bài cụ thể
+      const questions = await PracticeQuestion.find({ examCode });
+
+      if (questions.length === 0) {
+        return res.status(404).json({ message: 'Không tìm thấy câu hỏi' });
+      }
+
+      const safeQuestions = questions.map(q => ({
+        _id: q._id,
+        topic: q.topic,
+        question: q.question,
+        options: q.options
+      }));
+
+      return res.json({
+        questions: safeQuestions,
+        duration: questions[0]?.duration || 10,
+        topic: questions[0]?.topic,
+        examCode,
+        totalQuestions: questions.length
+      });
+    }
+
+    if (isAdmin) {
+      // 👨‍💼 Admin không truyền examCode → lấy tất cả đề
+      const allQuestions = await PracticeQuestion.find();
+
+      // Nhóm theo examCode
+      const grouped = {};
+      allQuestions.forEach(q => {
+        if (!grouped[q.examCode]) {
+          grouped[q.examCode] = {
+            examCode: q.examCode,
+            topic: q.topic,
+            duration: q.duration || 10,
+            totalQuestions: 0,
+            createdAt: q.createdAt
+          };
+        }
+        grouped[q.examCode].totalQuestions += 1;
+      });
+
+      const list = Object.values(grouped).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      return res.json({
+        totalSets: list.length,
+        exams: list
+      });
+    }
+
+    return res.status(400).json({ message: 'Thiếu examCode hoặc không đủ quyền' });
+  } catch (err) {
+    console.error('❌ Lỗi lấy đề ôn tập:', err);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
 
 module.exports = router;

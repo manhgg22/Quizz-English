@@ -24,14 +24,11 @@ import {
   TeamOutlined,
   FileTextOutlined,
   BarChartOutlined,
-  MessageOutlined,
-  LinkOutlined,
   TagOutlined,
   DownloadOutlined,
   BellOutlined,
   UserOutlined,
   RiseOutlined,
-  BookOutlined,
   TrophyOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -61,8 +58,9 @@ const AdminDashboard = () => {
     pendingScores: 0,
     completionRate: 0,
     recentActivities: [],
+     totalSets: 0,    
     topicStats: [],
-    monthlyProgress: 0
+     exams: []  
   });
 
   // Enhanced authentication helper function
@@ -113,6 +111,31 @@ const AdminDashboard = () => {
     }
   };
 
+  // Fixed fetch practice results function
+  const fetchPracticeResults = async () => {
+    try {
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/practice-results`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const results = await response.json();
+      console.log('✅ Practice results fetched:', results);
+      return results;
+    } catch (error) {
+      console.error('❌ Error fetching practice results:', error);
+      throw error;
+    }
+  };
+
   // Fetch real data from APIs with enhanced authentication
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -128,11 +151,10 @@ const AdminDashboard = () => {
         // Parallel API calls with enhanced error handling
         const apiCalls = [
           makeAuthenticatedRequest('/api/classes'),
-          makeAuthenticatedRequest('/api/classes'),
-          makeAuthenticatedRequest('/api/admin/exams'),
-          makeAuthenticatedRequest('/api/practice-results'),
-          makeAuthenticatedRequest('/api/admin/topics'),
-          makeAuthenticatedRequest('/api/admin/notifications')
+          makeAuthenticatedRequest('/api/classes'), // This seems to be for students, you might need a different endpoint
+          makeAuthenticatedRequest('/api/practice-questions'),
+          fetchPracticeResults(), // Use the fixed function
+          makeAuthenticatedRequest('/api/admin/topics')
         ];
 
         const results = await Promise.allSettled(apiCalls);
@@ -140,98 +162,118 @@ const AdminDashboard = () => {
         // Process classes data
         const classesResult = results[0];
         const classes = classesResult.status === 'fulfilled' && classesResult.value ? classesResult.value.data : [];
-        const totalClasses = classes.length;
-        const activeClasses = classes.filter(cls => cls.status === 'active').length;
+        const totalClasses = Array.isArray(classes) ? classes.length : 0;
+        const activeClasses = Array.isArray(classes) ? classes.filter(cls => cls.status === 'active').length : 0;
 
-        // Process students data
+        // Process students data (you might need a separate endpoint for students)
         const studentsResult = results[1];
         const students = studentsResult.status === 'fulfilled' && studentsResult.value ? studentsResult.value.data : [];
-        const totalStudents = students.length;
+        const totalStudents = Array.isArray(students) ? students.length : 0;
 
         // Process exams data
         const examsResult = results[2];
-        const exams = examsResult.status === 'fulfilled' && examsResult.value ? examsResult.value.data : [];
-        const totalExams = exams.length;
+        let totalSets = 0;
+        let examList = [];
 
-        // Process scores data
-        const scoresResult = results[3];
-        const scores = scoresResult.status === 'fulfilled' && scoresResult.value ? scoresResult.value.data : [];
-        const numericScores = scores
-          .filter(s => typeof s.score === 'number' && !isNaN(s.score));
+        if (examsResult.status === 'fulfilled' && examsResult.value) {
+          const examData = examsResult.value.data;
+          totalSets = examData?.totalSets || 0;
+          examList = Array.isArray(examData?.exams) ? examData.exams : [];
+        }
 
-        const averageScore = numericScores.length > 0
-          ? (numericScores.reduce((sum, s) => sum + s.score, 0) / numericScores.length).toFixed(1)
+        // Process practice results data - FIXED
+        const practiceResultsResult = results[3];
+        let practiceResults = [];
+        if (practiceResultsResult.status === 'fulfilled' && practiceResultsResult.value) {
+          practiceResults = Array.isArray(practiceResultsResult.value) ? practiceResultsResult.value : [];
+        }
+
+        console.log('📊 Practice results processed:', practiceResults.length, 'results');
+
+        // Calculate average score from practice results
+        const validScores = practiceResults
+          .filter(result => result.score !== null && result.score !== undefined && !isNaN(result.score))
+          .map(result => parseFloat(result.score));
+
+        const averageScore = validScores.length > 0
+          ? (validScores.reduce((sum, score) => sum + score, 0) / validScores.length).toFixed(1)
           : 0;
 
-        const completedScores = scores.filter(score => score.score !== null).length;
-        const completionRate = scores.length > 0 ? Math.round((completedScores / scores.length) * 100) : 0;
+        // Calculate completion rate
+        const completedResults = practiceResults.filter(result => result.score !== null && result.score !== undefined);
+        const completionRate = practiceResults.length > 0
+          ? Math.round((completedResults.length / practiceResults.length) * 100)
+          : 0;
+
+        // Count pending scores
+        const pendingScores = practiceResults.filter(result => result.score === null || result.score === undefined).length;
 
         // Process topics data
         const topicsResult = results[4];
         const topics = topicsResult.status === 'fulfilled' && topicsResult.value ? topicsResult.value.data : [];
 
-        // Process notifications data
-        const notificationsResult = results[5];
-        const notifications = notificationsResult.status === 'fulfilled' && notificationsResult.value ? notificationsResult.value.data : [];
-        const pendingNotifications = notifications.filter(notif => notif.status === 'pending').length;
-
         // Generate recent activities from actual data
-        const recentActivities = [
-          ...classes.slice(0, 2).map(cls => ({
-            id: `class-${cls.id}`,
-            text: `Lớp ${cls.name} được tạo mới`,
-            time: formatTimeAgo(cls.createdAt),
-            type: 'success',
-            class: cls.name
-          })),
-          ...exams.slice(0, 2).map(exam => ({
-            id: `exam-${exam.id}`,
-            text: `Bài thi "${exam.title}" được thêm vào hệ thống`,
-            time: formatTimeAgo(exam.createdAt),
-            type: 'info',
-            subject: exam.subject
-          })),
-          ...scores.slice(0, 2).map(score => ({
-            id: `score-${score.id}`,
-            text: `Học sinh ${score.studentName} hoàn thành bài thi (${score.score}/10)`,
-            time: formatTimeAgo(score.completedAt),
-            type: score.score >= 8 ? 'success' : score.score >= 5 ? 'warning' : 'error',
-            class: score.className
-          }))
-        ].slice(0, 5);
+        const recentActivities = [];
 
-        // Calculate monthly progress (example: completion rate this month)
-        const thisMonth = new Date().getMonth();
-        const thisMonthScores = scores.filter(score =>
-          new Date(score.createdAt).getMonth() === thisMonth
-        );
-        const monthlyProgress = thisMonthScores.length > 0
-          ? Math.round((thisMonthScores.filter(s => s.score >= 5).length / thisMonthScores.length) * 100)
-          : 0;
+        // Add activities from classes
+        if (Array.isArray(classes)) {
+          classes.slice(0, 2).forEach(cls => {
+            recentActivities.push({
+              id: `class-${cls.id}`,
+              text: `Lớp ${cls.name || cls.className || 'N/A'} được tạo mới`,
+              time: formatTimeAgo(cls.createdAt || cls.created_at),
+              type: 'success',
+              class: cls.name || cls.className
+            });
+          });
+        }
+
+        // Add activities from exams
+        // Add activities from exams
+if (Array.isArray(examList)) {
+  examList.slice(0, 2).forEach(exam => {
+
+            recentActivities.push({
+              id: `exam-${exam.id}`,
+              text: `Bài thi "${exam.title || 'N/A'}" được thêm vào hệ thống`,
+              time: formatTimeAgo(exam.createdAt || exam.created_at),
+              type: 'info',
+              subject: exam.subject || exam.topic
+            });
+          });
+        }
+
+        // Add activities from practice results
+        practiceResults.slice(0, 2).forEach(result => {
+          if (result.score !== null && result.score !== undefined) {
+            recentActivities.push({
+              id: `result-${result.id}`,
+              text: `Học sinh ${result.studentName || result.student_name || 'N/A'} hoàn thành bài thi (${result.score}/10)`,
+              time: formatTimeAgo(result.completedAt || result.completed_at || result.createdAt || result.created_at),
+              type: result.score >= 8 ? 'success' : result.score >= 5 ? 'warning' : 'error',
+              class: result.className || result.class_name
+            });
+          }
+        });
+
+        // Limit to 5 activities
+        const limitedActivities = recentActivities.slice(0, 5);
 
         setDashboardData({
-          totalClasses,
-          totalStudents,
-          totalExams,
-          averageScore: parseFloat(averageScore),
-          activeClasses,
-          pendingScores: scores.filter(score => score.score === null).length,
-          completionRate,
-          recentActivities,
-          topicStats: topics.slice(0, 5),
-          monthlyProgress,
-          pendingNotifications
-        });
+  totalClasses,
+  totalStudents,
+  exams: totalSets, // ✅ Sửa tại đây
+  averageScore: parseFloat(averageScore),
+  activeClasses,
+  pendingScores,
+  completionRate,
+  recentActivities: limitedActivities,
+  topicStats: Array.isArray(topics) ? topics.slice(0, 5) : [],
+  totalSets,  // ✅ Cần thêm để dùng ở nơi khác
+  exams: examList  // ✅ Thêm để dùng cho các thống kê khác
+});
 
-        // Log successful API calls for debugging
-        console.log('✅ Dashboard data loaded successfully from port 9999');
-        console.log('📊 Data summary:', {
-          classes: totalClasses,
-          students: totalStudents,
-          exams: totalExams,
-          averageScore: parseFloat(averageScore)
-        });
-
+      
       } catch (error) {
         console.error('❌ Error fetching dashboard data:', error);
 
@@ -256,9 +298,7 @@ const AdminDashboard = () => {
           pendingScores: 0,
           completionRate: 0,
           recentActivities: [],
-          topicStats: [],
-          monthlyProgress: 0,
-          pendingNotifications: 0
+          topicStats: []
         });
       } finally {
         setLoading(false);
@@ -322,12 +362,14 @@ const AdminDashboard = () => {
       trend: dashboardData.totalStudents > 0 ? 'Đang hoạt động' : 'Chưa có học sinh'
     },
     {
-      title: 'Bài ôn tập',
-      value: dashboardData.totalExams,
-      prefix: <FileTextOutlined />,
-      color: '#7c3aed',
-      trend: dashboardData.totalExams > 0 ? 'Đã tạo' : 'Chưa có bài tập'
-    },
+  title: 'Bài ôn tập',
+  value: dashboardData.totalSets,
+  prefix: <FileTextOutlined />,
+  color: '#7c3aed',
+  trend: dashboardData.totalSets > 0 ? `Tổng số bộ đề: ${dashboardData.totalSets}` : 'Chưa có bộ đề'
+}
+,
+
     {
       title: 'Điểm trung bình',
       value: dashboardData.averageScore,
@@ -346,22 +388,6 @@ const AdminDashboard = () => {
       path: '/admin/classes',
       description: 'Tạo lớp học mới',
       count: dashboardData.totalClasses
-    },
-    {
-      title: 'Gán bài ôn tập',
-      icon: <LinkOutlined />,
-      color: '#7c3aed',
-      path: '/admin/assign-exam',
-      description: 'Gán examCode cho lớp',
-      count: dashboardData.totalExams
-    },
-    {
-      title: 'Gửi thông báo',
-      icon: <MessageOutlined />,
-      color: '#0891b2',
-      path: '/admin/notifications',
-      description: 'Thông báo tới học sinh',
-      count: dashboardData.pendingNotifications
     },
     {
       title: 'Xuất điểm',
@@ -398,16 +424,6 @@ const AdminDashboard = () => {
       key: 'topics',
       icon: <TagOutlined />,
       label: 'Quản lý chủ đề',
-    },
-    {
-      key: 'assign-exam',
-      icon: <LinkOutlined />,
-      label: 'Gán bài ôn tập',
-    },
-    {
-      key: 'notifications',
-      icon: <MessageOutlined />,
-      label: 'Gửi thông báo',
     },
     {
       key: 'export',
@@ -538,9 +554,6 @@ const AdminDashboard = () => {
             >
               Làm mới
             </Button>
-            <Badge count={dashboardData.pendingNotifications} showZero>
-              <BellOutlined style={{ fontSize: 20, color: '#64748b' }} />
-            </Badge>
             <Button
               type="text"
               danger
@@ -678,81 +691,6 @@ const AdminDashboard = () => {
                       </Card>
                     </Col>
                   ))}
-                </Row>
-              </Card>
-
-              {/* Progress Overview */}
-              <Card
-                title={
-                  <Space>
-                    <BookOutlined style={{ color: '#059669' }} />
-                    <span style={{ color: '#1e293b', fontWeight: 600 }}>Tổng quan tiến độ</span>
-                  </Space>
-                }
-                style={{
-                  marginTop: 24,
-                  borderRadius: 16,
-                  border: 'none',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
-                }}
-                bodyStyle={{ padding: '24px' }}
-              >
-                <Row gutter={[32, 32]}>
-                  <Col xs={24} sm={12}>
-                    <div style={{ textAlign: 'center' }}>
-                      <Progress
-                        type="circle"
-                        percent={dashboardData.completionRate}
-                        strokeColor={{
-                          '0%': '#3b82f6',
-                          '100%': '#8b5cf6',
-                        }}
-                        size={120}
-                        strokeWidth={8}
-                        format={percent => (
-                          <div>
-                            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1e293b' }}>
-                              {percent}%
-                            </div>
-                            <div style={{ fontSize: 12, color: '#64748b' }}>
-                              Hoàn thành
-                            </div>
-                          </div>
-                        )}
-                      />
-                      <Text style={{ display: 'block', marginTop: 16, color: '#64748b', fontSize: 14 }}>
-                        Tỷ lệ hoàn thành bài tập
-                      </Text>
-                    </div>
-                  </Col>
-                  <Col xs={24} sm={12}>
-                    <div style={{ textAlign: 'center' }}>
-                      <Progress
-                        type="circle"
-                        percent={dashboardData.monthlyProgress}
-                        strokeColor={{
-                          '0%': '#059669',
-                          '100%': '#10b981',
-                        }}
-                        size={120}
-                        strokeWidth={8}
-                        format={percent => (
-                          <div>
-                            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1e293b' }}>
-                              {percent}%
-                            </div>
-                            <div style={{ fontSize: 12, color: '#64748b' }}>
-                              Đạt yêu cầu
-                            </div>
-                          </div>
-                        )}
-                      />
-                      <Text style={{ display: 'block', marginTop: 16, color: '#64748b', fontSize: 14 }}>
-                        Tỷ lệ đạt điểm tháng này
-                      </Text>
-                    </div>
-                  </Col>
                 </Row>
               </Card>
             </Col>

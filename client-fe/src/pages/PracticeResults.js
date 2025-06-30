@@ -50,32 +50,50 @@ const PracticeResults = () => {
     setFilteredResults(filtered);
   }, [searchText, results]);
 
-  const fetchResults = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:9999/api/practice-results', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setResults(data);
-      setFilteredResults(data);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      message.error('Lỗi khi lấy kết quả luyện tập');
-    } finally {
+ const fetchResults = async () => {
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const userData = JSON.parse(localStorage.getItem('user'));
+
+    if (!token || !userData) {
+      message.error('Vui lòng đăng nhập lại.');
       setLoading(false);
+      return;
     }
-  };
+
+    const isAdmin = userData.role === 'admin';
+
+    const response = await fetch('http://localhost:9999/api/practice-results', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Lỗi HTTP: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Nếu là admin → giữ toàn bộ
+    // Nếu là user thường → lọc lại theo userId để đảm bảo an toàn hiển thị
+    const filteredData = isAdmin
+      ? data
+      : data.filter(item => item.userId === userData._id);
+
+    setResults(filteredData);
+    setFilteredResults(filteredData);
+  } catch (err) {
+    console.error('❌ Lỗi khi fetch practice results:', err);
+    message.error('Không thể tải kết quả luyện tập');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Format date function
   const formatDateTime = (dateString) => {
