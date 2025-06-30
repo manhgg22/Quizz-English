@@ -58,9 +58,9 @@ const AdminDashboard = () => {
     pendingScores: 0,
     completionRate: 0,
     recentActivities: [],
-     totalSets: 0,    
+    totalSets: 0,
     topicStats: [],
-     exams: []  
+    exams: []
   });
 
   // Enhanced authentication helper function
@@ -230,8 +230,8 @@ const AdminDashboard = () => {
 
         // Add activities from exams
         // Add activities from exams
-if (Array.isArray(examList)) {
-  examList.slice(0, 2).forEach(exam => {
+        if (Array.isArray(examList)) {
+          examList.slice(0, 2).forEach(exam => {
 
             recentActivities.push({
               id: `exam-${exam.id}`,
@@ -260,20 +260,20 @@ if (Array.isArray(examList)) {
         const limitedActivities = recentActivities.slice(0, 5);
 
         setDashboardData({
-  totalClasses,
-  totalStudents,
-  exams: totalSets, // ✅ Sửa tại đây
-  averageScore: parseFloat(averageScore),
-  activeClasses,
-  pendingScores,
-  completionRate,
-  recentActivities: limitedActivities,
-  topicStats: Array.isArray(topics) ? topics.slice(0, 5) : [],
-  totalSets,  // ✅ Cần thêm để dùng ở nơi khác
-  exams: examList  // ✅ Thêm để dùng cho các thống kê khác
-});
+          totalClasses,
+          totalStudents,
+          exams: totalSets, // ✅ Sửa tại đây
+          averageScore: parseFloat(averageScore),
+          activeClasses,
+          pendingScores,
+          completionRate,
+          recentActivities: limitedActivities,
+          topicStats: Array.isArray(topics) ? topics.slice(0, 5) : [],
+          totalSets,  // ✅ Cần thêm để dùng ở nơi khác
+          exams: examList  // ✅ Thêm để dùng cho các thống kê khác
+        });
 
-      
+
       } catch (error) {
         console.error('❌ Error fetching dashboard data:', error);
 
@@ -362,13 +362,13 @@ if (Array.isArray(examList)) {
       trend: dashboardData.totalStudents > 0 ? 'Đang hoạt động' : 'Chưa có học sinh'
     },
     {
-  title: 'Bài ôn tập',
-  value: dashboardData.totalSets,
-  prefix: <FileTextOutlined />,
-  color: '#7c3aed',
-  trend: dashboardData.totalSets > 0 ? `Tổng số bộ đề: ${dashboardData.totalSets}` : 'Chưa có bộ đề'
-}
-,
+      title: 'Bài ôn tập',
+      value: dashboardData.totalSets,
+      prefix: <FileTextOutlined />,
+      color: '#7c3aed',
+      trend: dashboardData.totalSets > 0 ? `Tổng số bộ đề: ${dashboardData.totalSets}` : 'Chưa có bộ đề'
+    }
+    ,
 
     {
       title: 'Điểm trung bình',
@@ -416,7 +416,7 @@ if (Array.isArray(examList)) {
       label: 'Câu hỏi ôn tập',
     },
     {
-      key: 'scores',
+      key: 'practice-results',
       icon: <BarChartOutlined />,
       label: 'Xem điểm số',
     },

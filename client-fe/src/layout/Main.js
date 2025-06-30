@@ -16,6 +16,7 @@ import CreatePracticeQuestion from '../pages/CreatePracticeQuestion';
 import EnterPracticeExam from '../pages/EnterPracticeExam';
 import PracticeResults from '../pages/PracticeResults';
 import AdminHomePage from '../pages/AdminHomePage';
+import AdminScores from '../pages/AdminScores';
 
 const Main = () => {
   return (
@@ -93,8 +94,11 @@ const Main = () => {
     <PrivateRoute>
       <AdminHomePage />
     </PrivateRoute>
+    
   }
   />
+  <Route path="/admin/practice-results" element={<AdminScores />} />
+
 
 
         {/* Root redirect - check authentication */}
