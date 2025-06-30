@@ -75,7 +75,7 @@ const HomePage = () => {
           <h3>Ôn tập</h3>
           <p>Quản lý các câu hỏi ôn tập của bạn</p>
           <button
-            onClick={() => navigate('/questions')}
+            onClick={() => navigate('/practice ')}
             style={buttonStyle('#fd7e14')}
           >
             Xem các câu hỏi

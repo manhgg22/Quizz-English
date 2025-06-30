@@ -112,7 +112,16 @@ router.post('/submit', authMiddleware(), async (req, res) => {
       return res.status(400).json({ message: 'Thiếu dữ liệu nộp bài' });
     }
 
-    const questions = await PracticeQuestion.find({ examCode });
+    // ✅ Với bài luyện tập nhanh, lấy theo list _id
+    let questions = [];
+
+    if (examCode === 'quick-practice') {
+      const questionIds = answers.map(a => a.questionId);
+      questions = await PracticeQuestion.find({ _id: { $in: questionIds } });
+    } else {
+      questions = await PracticeQuestion.find({ examCode });
+    }
+
     if (questions.length === 0) {
       return res.status(404).json({ message: 'Không tìm thấy bài luyện tập' });
     }
@@ -129,26 +138,34 @@ router.post('/submit', authMiddleware(), async (req, res) => {
     const total = questions.length;
     const score = (correctCount / total) * 10;
 
-    // ✅ Lưu kết quả vào MongoDB
-    const result = await PracticeResult.create({
-      userId,
-      examCode,
-      correct: correctCount,
-      total,
-      score: Number(score.toFixed(2))
-    });
+    // ✅ Chỉ lưu kết quả nếu không phải luyện tập nhanh
+    if (examCode !== 'quick-practice') {
+      await PracticeResult.create({
+        userId,
+        examCode,
+        correct: correctCount,
+        total,
+        score: Number(score.toFixed(2))
+      });
+    }
 
-    res.json({
-      message: 'Nộp bài thành công',
-      correct: correctCount,
-      total,
-      score: result.score
-    });
+   res.json({
+  message: 'Nộp bài thành công',
+  correct: correctCount,
+  total,
+  score: Number(score.toFixed(2)),
+  correctAnswers: questions.map(q => ({
+    questionId: q._id.toString(),
+    correctAnswer: q.correctAnswer
+  }))
+});
+
   } catch (err) {
     console.error('Lỗi khi nộp bài luyện tập:', err);
     res.status(500).json({ message: 'Lỗi máy chủ' });
   }
 });
+
 // ✅ [4] User hủy bài thi
 router.post('/cancel', authMiddleware(), async (req, res) => {
   try {
@@ -229,6 +246,53 @@ router.get('/', authMiddleware(), async (req, res) => {
     res.status(500).json({ message: 'Lỗi server' });
   }
 });
+
+// ✅ [NEW] Học sinh lấy toàn bộ câu hỏi theo topic để luyện tập ngẫu nhiên
+router.get('/by-topic', authMiddleware(), async (req, res) => {
+  try {
+    const { topic } = req.query;
+    if (!topic) {
+      return res.status(400).json({ message: 'Thiếu topic' });
+    }
+
+    const questions = await PracticeQuestion.find({ topic });
+
+    if (questions.length === 0) {
+      return res.status(404).json({ message: 'Không có câu hỏi cho chủ đề này' });
+    }
+
+    const safeQuestions = questions.map(q => ({
+      _id: q._id,
+      question: q.question,
+      options: q.options,
+      duration: q.duration || 10 // 👈 giữ duration nếu FE cần dùng
+    }));
+
+    const duration = questions[0]?.duration || 10;
+
+    res.json({
+      topic,
+      duration, // ✅ thêm duration
+      totalQuestions: safeQuestions.length,
+      questions: safeQuestions
+    });
+  } catch (err) {
+    console.error('Lỗi lấy câu hỏi theo topic:', err);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
+// ✅ [NEW] Lấy danh sách tất cả topic (dành cho dropdown luyện tập nhanh)
+router.get('/topics', authMiddleware(), async (req, res) => {
+  try {
+    const topics = await PracticeQuestion.distinct('topic');
+    res.json({ topics });
+  } catch (err) {
+    console.error('Lỗi lấy danh sách topic:', err);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
 
 
 module.exports = router;

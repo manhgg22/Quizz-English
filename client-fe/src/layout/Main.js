@@ -17,6 +17,7 @@ import EnterPracticeExam from '../pages/EnterPracticeExam';
 import PracticeResults from '../pages/PracticeResults';
 import AdminHomePage from '../pages/AdminHomePage';
 import AdminScores from '../pages/AdminScores';
+import PracticeStart from '../pages/PracticeStart';
 
 const Main = () => {
   return (
@@ -98,6 +99,7 @@ const Main = () => {
   }
   />
   <Route path="/admin/practice-results" element={<AdminScores />} />
+   <Route path="/practice/start" element={<PracticeStart />} />
 
 
 
@@ -107,6 +109,7 @@ const Main = () => {
           element={<AuthRedirect />}
         />
         <Route path="/questions" element={<QuestionsPage />} />
+         <Route path="/practice" element={<CreatePracticeQuestion />} />
         <Route path="/admin/classes" element={<AdminCreateClass />} />
         <Route path="/join-class" element={<JoinClass />} />
 
