@@ -2,23 +2,18 @@
 const express = require('express');
 const router = express.Router();
 const { explainMistake } = require('./gemini');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+
 
 router.post('/', async (req, res) => {
   try {
-    // Debug: In ra toàn bộ request body
-    console.log('🔍 FULL REQUEST BODY:', JSON.stringify(req.body, null, 2));
-    console.log('🔍 Request body type:', typeof req.body);
-    console.log('🔍 Request body keys:', Object.keys(req.body));
     
-    // Sửa: Nhận cả questions và mistakes
     const mistakes = req.body.mistakes || req.body.questions || [];
-    console.log('📋 Mistakes array:', mistakes);
-    console.log('📋 Mistakes length:', mistakes.length);
-    console.log('📋 Mistakes type:', typeof mistakes);
     
-    // Kiểm tra nếu mistakes rỗng
+ 
     if (!mistakes || mistakes.length === 0) {
-      console.log('⚠️ No mistakes found in request');
       return res.json({ 
         explanations: [], 
         debug: { 
@@ -33,11 +28,11 @@ router.post('/', async (req, res) => {
 
     for (let i = 0; i < mistakes.length; i++) {
       const mistake = mistakes[i];
-      console.log(`🔍 Processing mistake ${i + 1}:`, mistake);
+  
       
       // Kiểm tra cấu trúc của mistake
       if (!mistake.question || !mistake.correct || !mistake.selected) {
-        console.log('⚠️ Invalid mistake structure:', mistake);
+
         continue;
       }
       
@@ -47,7 +42,7 @@ router.post('/', async (req, res) => {
           question: mistake.question,
           explanation,
         });
-        console.log(`✅ Added explanation ${i + 1}`);
+    
       } catch (error) {
         console.error(`❌ Error processing mistake ${i + 1}:`, error.message);
         explanations.push({
@@ -57,7 +52,7 @@ router.post('/', async (req, res) => {
       }
     }
 
-    console.log('✅ Final explanations count:', explanations.length);
+
     res.json({ explanations });
   } catch (err) {
     console.error('❌ Lỗi tổng quát:', err.message);
@@ -75,15 +70,31 @@ router.post('/chat', async (req, res) => {
   if (!prompt) return res.status(400).json({ reply: 'Prompt không hợp lệ' });
 
   try {
+    // Thử với gemini-1.5-pro
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
     const result = await model.generateContent(prompt);
     const reply = await result.response.text();
     res.json({ reply });
   } catch (err) {
-    console.error('Gemini chat error:', err.message);
+    console.warn('⚠️ Lỗi gemini-1.5-pro:', err.message);
+
+    // Nếu lỗi là quota, fallback sang gemini-1.5-flash
+    if (err.message.includes('quota') || err.message.includes('429')) {
+      try {
+        const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const fallbackResult = await fallbackModel.generateContent(prompt);
+        const fallbackReply = await fallbackResult.response.text();
+        return res.json({ reply: fallbackReply + '\n\n()' });
+      } catch (fallbackErr) {
+        console.error('❌ Lỗi fallback flash:', fallbackErr.message);
+        return res.status(500).json({ reply: 'Cả 2 model đều lỗi: ' + fallbackErr.message });
+      }
+    }
+
     res.status(500).json({ reply: 'Lỗi khi gọi Gemini: ' + err.message });
   }
 });
+
 
 
 module.exports = router;

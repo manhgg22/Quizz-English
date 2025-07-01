@@ -3,7 +3,7 @@ import {
   Card, Typography, Radio, Button,
   message, Space, Modal, Alert, FloatButton, Input, Spin, Badge, Tabs, Drawer
 } from 'antd';
-import { SendOutlined, RobotFilled, CommentOutlined, CloseOutlined } from '@ant-design/icons';
+import { SendOutlined, RobotFilled, CommentOutlined, CloseOutlined, BulbOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { getExplanations } from '../api/api';
 import AIReviewBox from '../pages/AIReviewBox';
@@ -21,9 +21,12 @@ const PracticeStart = () => {
   const [timeLeft, setTimeLeft] = useState(600);
   const [submitted, setSubmitted] = useState(false);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
-
   
-  // AI Chatbot states - Optimized
+  // AI Explanations states
+  const [loadingExplanations, setLoadingExplanations] = useState(false);
+  const [explanationsLoaded, setExplanationsLoaded] = useState(false);
+  
+  // AI Chatbot states
   const [chatVisible, setChatVisible] = useState(false);
   const [chat, setChat] = useState([]);
   const [input, setInput] = useState('');
@@ -175,28 +178,43 @@ const PracticeStart = () => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
 
-  const handleSubmit = async () => {
-  if (submitted) return;
+  // Function to load AI explanations on demand
+  const loadAIExplanations = async () => {
+    if (explanationsLoaded || loadingExplanations) return;
+    
+    setLoadingExplanations(true);
+    
+    try {
+      // CHỈ lấy câu SAI để giải thích
+      const wrongAnswers = questions
+        .filter(q => answers[q._id] !== correctAnswers[q._id])
+        .map(q => ({
+          question: q.question,
+          selected: answers[q._id] || 'Không trả lời',
+          correct: correctAnswers[q._id]
+        }));
 
-  if (Object.keys(answers).length !== questions.length) {
-    Modal.confirm({
-      title: 'Một số câu chưa trả lời',
-      content: 'Bạn vẫn muốn nộp bài chứ?',
-      okText: 'Nộp bài',
-      cancelText: 'Quay lại',
-      onOk: () => {
-        setLoadingSubmit(true);
-        submitAnswers();
+      if (wrongAnswers.length === 0) {
+        setExplanations([]);
+        setExplanationsLoaded(true);
+        message.info('🎉 Bạn làm đúng tất cả, không cần giải thích thêm!');
+        return;
       }
-    });
-  } else {
-    setLoadingSubmit(true);
-    submitAnswers();
-  }
-};
 
+      const explainRes = await getExplanations(wrongAnswers);
+      setExplanations(explainRes.explanations || []);
+      setExplanationsLoaded(true);
+      message.success(`✅ Đã tải ${explainRes.explanations?.length || 0} giải thích từ AI!`);
+      
+    } catch (error) {
+      console.error('Lỗi khi lấy giải thích từ AI:', error);
+      message.error('❌ Không thể tải giải thích từ AI. Vui lòng thử lại!');
+    } finally {
+      setLoadingExplanations(false);
+    }
+  };
 
-  // AI Chatbot functions - Optimized
+  // AI Chatbot functions
   const initializeChat = (correctCount, total, score) => {
     const wrongCount = total - correctCount;
     const initialMessage = `🎉 Chúc mừng bạn đã hoàn thành bài luyện tập!
@@ -290,7 +308,77 @@ ${wrongCount > 0 ? `❌ Bạn có ${wrongCount} câu sai. Tôi sẽ giúp bạn 
     }
   };
 
-  // Render Chat Component - Optimized để có thể tái sử dụng
+  const handleSubmit = async () => {
+    if (submitted) return;
+
+    if (Object.keys(answers).length !== questions.length) {
+      Modal.confirm({
+        title: 'Một số câu chưa trả lời',
+        content: 'Bạn vẫn muốn nộp bài chứ?',
+        okText: 'Nộp bài',
+        cancelText: 'Quay lại',
+        onOk: () => {
+          submitAnswers();
+        }
+      });
+    } else {
+      submitAnswers();
+    }
+  };
+
+  const submitAnswers = async () => {
+    if (Object.keys(answers).length === 0) {
+      message.error("❌ Bạn chưa chọn bất kỳ đáp án nào!");
+      return;
+    }
+
+    setLoadingSubmit(true);
+
+    try {
+      const response = await fetch('http://localhost:9999/api/practice-questions/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + localStorage.getItem('token')
+        },
+        body: JSON.stringify({
+          examCode: 'quick-practice',
+          answers: Object.entries(answers).map(([questionId, answer]) => ({
+            questionId,
+            answer
+          }))
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        message.error(result.message || 'Lỗi khi nộp bài');
+        return;
+      }
+
+      // Xử lý kết quả
+      const correctMap = {};
+      result.correctAnswers?.forEach((item) => {
+        correctMap[item.questionId] = item.correctAnswer;
+      });
+
+      setCorrectAnswers(correctMap);
+      setTestResult(result);
+      initializeChat(result.correct, result.total, result.score);
+
+      setSubmitted(true);
+      setResultModalVisible(true);
+      
+    } catch (err) {
+      console.error(err);
+      message.error('Không thể nộp bài');
+    } finally {
+      setLoadingSubmit(false);
+    }
+  };
+
+  // Render Chat Component
   const renderChatbox = () => (
     <div
       style={{
@@ -426,73 +514,60 @@ ${wrongCount > 0 ? `❌ Bạn có ${wrongCount} câu sai. Tôi sẽ giúp bạn 
     </div>
   );
 
- const submitAnswers = async () => {
-  setLoadingSubmit(true); // đảm bảo trạng thái loading
-
-  try {
-    const response = await fetch('http://localhost:9999/api/practice-questions/submit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + localStorage.getItem('token')
-      },
-      body: JSON.stringify({
-        examCode: 'quick-practice',
-        answers: Object.entries(answers).map(([questionId, answer]) => ({
-          questionId,
-          answer
-        }))
-      })
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      message.error(result.message || 'Lỗi khi nộp bài');
-      return;
+  // Render AI Explanations Tab với lazy loading
+  const renderAIExplanationsTab = () => {
+    const wrongCount = questions.filter(q => answers[q._id] !== correctAnswers[q._id]).length;
+    
+    if (wrongCount === 0) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <Title level={4}>🎉 Hoàn hảo!</Title>
+          <Text>Bạn đã làm đúng tất cả các câu, không cần giải thích thêm!</Text>
+        </div>
+      );
     }
 
-    const correctMap = {};
-    result.correctAnswers?.forEach((item) => {
-      correctMap[item.questionId] = item.correctAnswer;
-    });
-
-    setCorrectAnswers(correctMap);
-    setTestResult(result);
-    initializeChat(result.correct, result.total, result.score);
-
-    const wrongAnswers = questions
-      .filter(q => answers[q._id] !== correctMap[q._id])
-      .map(q => ({
-        question: q.question,
-        selected: answers[q._id],
-        correct: correctMap[q._id]
-      }));
-
-    if (wrongAnswers.length > 0) {
-      try {
-        const explainRes = await getExplanations(wrongAnswers);
-        setExplanations(explainRes.explanations || []);
-      } catch (error) {
-        console.error('Lỗi khi lấy giải thích từ Gemini:', error);
-        message.warning('Không thể tải giải thích từ AI');
-      }
+    if (!explanationsLoaded) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <BulbOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '16px' }} />
+          <Title level={4}>Giải thích AI cho câu sai</Title>
+          <Text style={{ display: 'block', marginBottom: '24px' }}>
+            Bạn có {wrongCount} câu sai. AI sẽ giải thích chi tiết cho bạn hiểu rõ hơn.
+          </Text>
+          <Button 
+            type="primary" 
+            size="large"
+            icon={<BulbOutlined />}
+            onClick={loadAIExplanations}
+            loading={loadingExplanations}
+          >
+            {loadingExplanations ? 'Đang tải giải thích...' : 'Lấy giải thích từ AI'}
+          </Button>
+          <div style={{ marginTop: '16px' }}>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              💡 Chỉ giải thích các câu bạn làm sai để tối ưu thời gian
+            </Text>
+          </div>
+        </div>
+      );
     }
 
-    // ✅ Cuối cùng mới set submitted
-    setSubmitted(true);
-    setResultModalVisible(true);
-  } catch (err) {
-    console.error(err);
-    message.error('Không thể nộp bài');
-  } finally {
-    setLoadingSubmit(false);
-  }
-};
+    return (
+      <div>
+        <div style={{ marginBottom: '16px', padding: '12px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: '6px' }}>
+          <Text type="success">
+            ✅ Đã tải {explanations.length} giải thích cho các câu sai
+          </Text>
+        </div>
+        {explanations.map((item, idx) => (
+          <AIReviewBox key={idx} explanation={item.explanation} index={idx} />
+        ))}
+      </div>
+    );
+  };
 
-
-
-  // Render Result Modal với Tabs
+  // Render Result Modal với Tabs được tối ưu
   const renderResultModal = () => (
     <Modal
       title="🎉 Kết quả luyện tập"
@@ -520,7 +595,16 @@ ${wrongCount > 0 ? `❌ Bạn có ${wrongCount} câu sai. Tôi sẽ giúp bạn 
         <Text>Điểm: <Text strong>{testResult?.score.toFixed(2)}/10</Text></Text>
       </div>
 
-      <Tabs defaultActiveKey="1" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+      <Tabs 
+        defaultActiveKey="1" 
+        style={{ maxHeight: '500px', overflowY: 'auto' }}
+        onChange={(key) => {
+          // Tự động load AI explanations khi user click vào tab
+          if (key === "2" && !explanationsLoaded && !loadingExplanations) {
+            loadAIExplanations();
+          }
+        }}
+      >
         <TabPane tab="📝 Chi tiết câu hỏi" key="1">
           {questions.map((q, index) => {
             const correct = correctAnswers[q._id];
@@ -569,16 +653,21 @@ ${wrongCount > 0 ? `❌ Bạn có ${wrongCount} câu sai. Tôi sẽ giúp bạn 
           })}
         </TabPane>
 
-        {explanations.length > 0 && (
-          <TabPane tab="🧠 Giải thích AI" key="2">
-            <div>
-              <Title level={4}>Giải thích các câu sai từ trợ lý AI</Title>
-              {explanations.map((item, idx) => (
-                <AIReviewBox key={idx} explanation={item.explanation} index={idx} />
-              ))}
-            </div>
-          </TabPane>
-        )}
+        <TabPane 
+          tab={
+            <span>
+              🧠 Giải thích AI 
+              {!explanationsLoaded && (
+                <Badge count={questions.filter(q => answers[q._id] !== correctAnswers[q._id]).length} 
+                       style={{ marginLeft: 8 }} 
+                />
+              )}
+            </span>
+          } 
+          key="2"
+        >
+          {renderAIExplanationsTab()}
+        </TabPane>
       </Tabs>
 
       <Alert 
@@ -646,28 +735,26 @@ ${wrongCount > 0 ? `❌ Bạn có ${wrongCount} câu sai. Tôi sẽ giúp bạn 
         </Card>
       ))}
 
-     {!submitted && questions.length > 0 && (
-  <div style={{ textAlign: 'center', marginTop: 32 }}>
-    <Spin spinning={loadingSubmit}>
-      <Button
-        type="primary"
-        size="large"
-        onClick={handleSubmit}
-        disabled={loadingSubmit}
-      >
-        Nộp bài
-      </Button>
-    </Spin>
-  </div>
-)}
+      {!submitted && questions.length > 0 && (
+        <div style={{ textAlign: 'center', marginTop: 32 }}>
+          <Spin spinning={loadingSubmit}>
+            <Button
+              type="primary"
+              size="large"
+              onClick={handleSubmit}
+              disabled={loadingSubmit}
+            >
+              Nộp bài
+            </Button>
+          </Spin>
+        </div>
+      )}
 
+      {/* Hiển thị modal kết quả */}
+      {resultModalVisible && renderResultModal()}
 
-      {/* AI Chatbot FloatButton - chỉ hiển thị sau khi nộp bài */}
-      {/* Luôn luôn hiển thị modal kết quả nếu cần */}
-{resultModalVisible && renderResultModal()}
-
-{/* Hiển thị FloatButton và chatbox nếu đã nộp bài */}
-{submitted && (
+      {/* Hiển thị FloatButton và chatbox nếu đã nộp bài */}
+    {submitted && (
   <>
     <Badge count={newMessages} offset={[-8, 8]}>
       <FloatButton
@@ -688,3 +775,4 @@ ${wrongCount > 0 ? `❌ Bạn có ${wrongCount} câu sai. Tôi sẽ giúp bạn 
 };
 
 export default PracticeStart;
+        

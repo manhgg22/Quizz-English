@@ -33,7 +33,7 @@ Học sinh đã chọn: ${selected}
     return await callGemini("gemini-1.5-pro", prompt);
   } catch (err) {
     if (err.message.includes("429")) {
-      console.warn("⚠️ Quota exceeded — fallback to flash");
+      
       return await callGemini("gemini-1.5-flash", prompt);
     }
     throw new Error("Không thể lấy phản hồi từ Gemini: " + err.message);
