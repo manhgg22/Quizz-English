@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { hashPassword, comparePassword } = require('../utils/hash');
 require('dotenv').config();
 
+
 // ĐĂNG KÝ (chỉ user)
 const register = async (req, res) => {
   const { email, password, role = 'user' } = req.body;
@@ -62,8 +63,52 @@ const login = async (req, res) => {
     res.status(500).json({ msg: 'Lỗi server' });
   }
 };
+const generateRandomPassword = () => {
+  return crypto.randomBytes(8).toString('hex'); // ví dụ: 'c1f2a3e4b5d6g7h8'
+};
+
+// 🧠 Đăng nhập Google
+const googleLogin = async (req, res) => {
+  const { email, fullName, avatar } = req.body;
+
+  try {
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // nếu chưa tồn tại, tạo mới user
+      const rawPassword = crypto.randomBytes(8).toString('hex');
+      const hashedPassword = hashPassword(rawPassword);
+
+      user = await User.create({
+        email,
+        fullName,
+        password: hashedPassword,
+        avatar,
+        role: 'user',
+        status: 'active'
+      });
+    }
+
+    // luôn trả về token và user
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '10h' }
+    );
+
+    res.json({ token, user });
+
+  } catch (err) {
+    console.error('GOOGLE LOGIN ERROR:', err);
+    res.status(500).json({ msg: 'Đăng nhập Google thất bại' });
+  }
+};
+
+
+
 
 module.exports = {
   register,
-  login
+  login,
+  googleLogin
 };

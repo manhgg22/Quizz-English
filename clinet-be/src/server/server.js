@@ -10,6 +10,9 @@ const practiceResultRoute = require('../routes/practiceResultRoute');
 const profileRoutes = require('../routes/profile');
 const explainRouter = require('./explain');
 const cors = require('cors')
+const passport = require('passport');
+require('../config/passportConfig');
+
 require('dotenv').config();
 // Tạo server
 const server = express();
@@ -21,6 +24,7 @@ server.use(cors({
 // Ket noi den DB
 
 server.use(express.json());
+server.use(passport.initialize());
 server.use('/api/auth', authRoutes);
 server.use('/api/questions', questionRoutes);
 server.use('/api/classes', adminRoutes);
@@ -31,6 +35,7 @@ server.use('/api/practice-results', practiceResultRoute);
 server.use('/api/explain', explainRouter);
 server.use('/api/users', profileRoutes);
 server.use('/api/uploads', express.static('uploads'));
+
 
 
 mongoose.connect(process.env.MONGO_URI)

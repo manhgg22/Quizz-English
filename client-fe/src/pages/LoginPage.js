@@ -59,6 +59,8 @@ const LoginPage = () => {
       // Lưu vào localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      window.dispatchEvent(new Event('loginSuccess'));
+
       
       // Lưu remember me
       if (values.remember) {

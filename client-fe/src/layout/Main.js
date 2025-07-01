@@ -22,6 +22,7 @@ import AdminCreatePraticeQuestion from '../pages/AdminCreatePraticeQuestion';
 import Help from '../pages/Help';
 import Profile from '../pages/Profile';
 import ChangePassword from '../pages/ChangePassword';
+import GoogleCallback from '../pages/google-callback';
 
 const Main = () => {
   const location = useLocation();
@@ -113,6 +114,8 @@ const Main = () => {
         <Route path="/practice/start" element={<PracticeStart />} />
          <Route path="/profile" element={<Profile />} />
         <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/google-callback" element={<GoogleCallback />} />
+
 
 
         {/* Root redirect - check authentication */}
