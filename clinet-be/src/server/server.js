@@ -7,6 +7,7 @@ const joinClassRoute = require('../routes/joinClassRoute');
 const practiceQuestionsRoute = require('../routes/practiceQuestionsRoute');
 const practiceStartRoute = require('../routes/practiceStartRoute');
 const practiceResultRoute = require('../routes/practiceResultRoute');
+const explainRouter = require('./explain');
 const cors = require('cors')
 require('dotenv').config();
 // Tạo server
@@ -26,6 +27,8 @@ server.use('/api/join-class', joinClassRoute);
 server.use('/api/practice-questions', practiceQuestionsRoute); 
 server.use('/api/practice', practiceStartRoute);   
 server.use('/api/practice-results', practiceResultRoute);
+server.use('/api/explain', explainRouter)
+
 
 mongoose.connect(process.env.MONGO_URI)
 

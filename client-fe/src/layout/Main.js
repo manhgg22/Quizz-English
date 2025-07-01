@@ -18,6 +18,7 @@ import PracticeResults from '../pages/PracticeResults';
 import AdminHomePage from '../pages/AdminHomePage';
 import AdminScores from '../pages/AdminScores';
 import PracticeStart from '../pages/PracticeStart';
+import AdminCreatePraticeQuestion from '../pages/AdminCreatePraticeQuestion';
 
 const Main = () => {
   return (
@@ -52,7 +53,7 @@ const Main = () => {
           path="/admin/exams"
           element={
             <PrivateRoute>
-              <CreatePracticeQuestion />
+              <AdminCreatePraticeQuestion />
             </PrivateRoute>
           }
         />

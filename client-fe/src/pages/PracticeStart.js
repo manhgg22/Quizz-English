@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Card, Typography, Radio, Button,
   message, Space, Modal, Alert
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { getExplanations } from '../api/api'; // ✅ import API gọi backend để lấy giải thích Gemini
 
 const { Title, Text } = Typography;
 
@@ -12,9 +13,105 @@ const PracticeStart = () => {
   const [topic, setTopic] = useState('');
   const [answers, setAnswers] = useState({});
   const [correctAnswers, setCorrectAnswers] = useState({});
+  const [explanations, setExplanations] = useState([]); // ✅ chứa giải thích từ Gemini
   const [timeLeft, setTimeLeft] = useState(600);
   const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
+
+  // ✅ Chặn navigation thủ công thay thế useBlocker
+  const handlePopState = useCallback((e) => {
+    if (!submitted) {
+      e.preventDefault();
+      Modal.confirm({
+        title: '⚠️ Cảnh báo',
+        content: 'Bạn đang làm bài thi. Nếu thoát, dữ liệu sẽ bị mất. Bạn có chắc muốn thoát?',
+        okText: 'Thoát',
+        cancelText: 'Ở lại',
+        okType: 'danger',
+        onOk: () => {
+          // Cho phép thoát
+          navigate('/practice');
+        },
+        onCancel: () => {
+          // Đẩy lại state để người dùng ở lại trang
+          window.history.pushState(null, '', window.location.pathname);
+        }
+      });
+      // Đẩy lại state để ngăn navigation
+      window.history.pushState(null, '', window.location.pathname);
+    }
+  }, [submitted, navigate]);
+
+  // ✅ Chặn reload/tab close  
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!submitted) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [submitted]);
+
+  // Vô hiệu hóa F5, Ctrl+R, Ctrl+F5
+  const handleKeyDown = useCallback((e) => {
+    if (!submitted) {
+      // F5
+      if (e.key === 'F5') {
+        e.preventDefault();
+        message.warning('Không thể refresh trang khi đang làm bài!');
+        return;
+      }
+      
+      // Ctrl + R (Reload)
+      if (e.ctrlKey && e.key === 'r') {
+        e.preventDefault();
+        message.warning('Không thể refresh trang khi đang làm bài!');
+        return;
+      }
+      
+      // Ctrl + F5 (Hard reload)
+      if (e.ctrlKey && e.key === 'F5') {
+        e.preventDefault();
+        message.warning('Không thể refresh trang khi đang làm bài!');
+        return;
+      }
+      
+      // Ctrl + Shift + R (Hard reload)
+      if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        message.warning('Không thể refresh trang khi đang làm bài!');
+        return;
+      }
+
+      // Chặn mở Developer Tools
+      if (e.key === 'F12' || 
+          (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+          (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+          (e.ctrlKey && e.key === 'U')) {
+        e.preventDefault();
+        message.warning('Không thể mở Developer Tools khi đang làm bài!');
+        return;
+      }
+    }
+  }, [submitted]);
+
+  // Chặn right-click menu
+  const handleContextMenu = useCallback((e) => {
+    if (!submitted) {
+      e.preventDefault();
+      message.warning('Không thể click chuột phải khi đang làm bài!');
+    }
+  }, [submitted]);
+
+  // Chặn việc rời focus khỏi window (Alt+Tab, etc.)
+  const handleVisibilityChange = useCallback(() => {
+    if (!submitted && document.hidden) {
+      message.warning('⚠️ Phát hiện bạn đã chuyển sang tab/ứng dụng khác!');
+      // Có thể thêm logic đếm số lần vi phạm ở đây
+    }
+  }, [submitted]);
 
   useEffect(() => {
     const data = localStorage.getItem('quickPracticeQuestions');
@@ -27,8 +124,36 @@ const PracticeStart = () => {
     const parsed = JSON.parse(data);
     setQuestions(parsed.questions || []);
     setTopic(parsed.topic || '');
-    setTimeLeft((parsed.duration || 10) * 60); // phút → giây
+    setTimeLeft((parsed.duration || 10) * 60);
   }, [navigate]);
+
+
+
+  
+
+  // ✅ Setup các event listeners bảo mật
+  useEffect(() => {
+    // Chặn browser back/forward
+    window.addEventListener('popstate', handlePopState);
+    window.history.pushState(null, '', window.location.pathname);
+    
+    // Chặn keyboard shortcuts
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Chặn right-click
+    document.addEventListener('contextmenu', handleContextMenu);
+    
+    // Theo dõi focus
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [handlePopState, handleKeyDown, handleContextMenu, handleVisibilityChange]);
 
   useEffect(() => {
     if (submitted || timeLeft <= 0) return;
@@ -104,6 +229,25 @@ const PracticeStart = () => {
       });
       setCorrectAnswers(correctMap);
 
+      // ✅ LỌC CÂU SAI VÀ GỬI ĐI LẤY GIẢI THÍCH
+      const wrongAnswers = questions
+        .filter(q => answers[q._id] !== correctMap[q._id])
+        .map(q => ({
+          question: q.question,
+          selected: answers[q._id],
+          correct: correctMap[q._id]
+        }));
+
+      if (wrongAnswers.length > 0) {
+        try {
+          const explainRes = await getExplanations(wrongAnswers);
+          setExplanations(explainRes.explanations || []);
+        } catch (error) {
+          console.error('Lỗi khi lấy giải thích từ Gemini:', error);
+          message.warning('Không thể tải giải thích từ AI');
+        }
+      }
+
       // ✅ Hiển thị trong Modal kết quả + đáp án chi tiết
       Modal.success({
         title: '🎉 Kết quả luyện tập',
@@ -137,6 +281,19 @@ const PracticeStart = () => {
                   </Card>
                 );
               })}
+
+              {/* ✅ HIỂN THỊ GIẢI THÍCH TỪ GEMINI */}
+              {explanations.length > 0 && (
+                <div style={{ marginTop: 24 }}>
+                  <Title level={4}>🧠 Giải thích câu sai từ trợ lý AI</Title>
+                  {explanations.map((item, idx) => (
+                    <Card key={idx} type="inner" title={`Giải thích câu ${idx + 1}`} style={{ marginBottom: 10 }}>
+                      <p><Text strong>{item.question}</Text></p>
+                      <p style={{ whiteSpace: 'pre-wrap' }}>{item.explanation}</p>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ),
@@ -155,6 +312,15 @@ const PracticeStart = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      {/* Thông báo cảnh báo ở đầu trang */}
+      <Alert
+        message="⚠️ Lưu ý quan trọng"
+        description="Trong quá trình làm bài, vui lòng không thoát trang, reload, hoặc chuyển sang tab khác. Hệ thống sẽ theo dõi các hành vi này."
+        type="warning"
+        showIcon
+        style={{ marginBottom: 16 }}
+      />
+
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
