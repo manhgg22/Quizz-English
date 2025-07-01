@@ -1,46 +1,42 @@
-require('dotenv').config();
+require("dotenv").config();
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-async function explainMistake(questionObj) {
-  const apiKey = process.env.GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`;
+async function callGemini(modelName, prompt) {
+  const model = genAI.getGenerativeModel({ model: modelName });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const text = response.text();
+  return text;
+}
 
+async function explainMistake({ question, correct, selected }) {
   const prompt = `
-Bạn là trợ lý AI. Hãy giải thích tại sao người dùng chọn sai đáp án.
+Bạn là trợ lý AI giúp học sinh hiểu lý do vì sao các em làm sai câu hỏi.
 
-Câu hỏi: ${questionObj.question}
-Đáp án đúng: ${questionObj.correct}
-Người dùng chọn: ${questionObj.selected}
+Yêu cầu:
+- Viết ngắn gọn, dễ hiểu, dành cho học sinh tiểu học.
+- Trình bày kết quả dưới dạng JSON với 3 phần:
+  {
+    "why_wrong": "Giải thích vì sao đáp án của học sinh sai.",
+    "how_to_fix": "Học sinh nên làm gì để tránh lỗi này.",
+    "recommendation": "Lời khuyên nhẹ nhàng, tích cực, dễ hiểu."
+  }
 
-Giải thích chi tiết:
+Câu hỏi: ${question}
+Đáp án đúng: ${correct}
+Học sinh đã chọn: ${selected}
 `;
 
-  const body = {
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: prompt }]
-      }
-    ]
-  };
-
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(`[${res.status}] ${data.error?.message || 'Unknown error'}`);
-    }
-
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "(Không có giải thích)";
+    return await callGemini("gemini-1.5-pro", prompt);
   } catch (err) {
-    console.error("❌ Lỗi gọi Gemini:", err.message);
-    throw new Error("Không thể lấy giải thích từ Gemini");
+    if (err.message.includes("429")) {
+      console.warn("⚠️ Quota exceeded — fallback to flash");
+      return await callGemini("gemini-1.5-flash", prompt);
+    }
+    throw new Error("Không thể lấy phản hồi từ Gemini: " + err.message);
   }
 }
 
