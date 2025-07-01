@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import HomePage from '../pages/HomePage';
 import ExamPage from '../pages/ExamPage';
 import ClassPage from '../pages/ClassPage';
@@ -19,10 +19,22 @@ import AdminHomePage from '../pages/AdminHomePage';
 import AdminScores from '../pages/AdminScores';
 import PracticeStart from '../pages/PracticeStart';
 import AdminCreatePraticeQuestion from '../pages/AdminCreatePraticeQuestion';
+import Help from '../pages/Help';
+import Profile from '../pages/Profile';
+import ChangePassword from '../pages/ChangePassword';
 
 const Main = () => {
+  const location = useLocation();
+  
+  // Các trang không cần padding và minHeight
+  const fullScreenPages = ['/login', '/register', '/forgot-password', '/welcome'];
+  const isFullScreenPage = fullScreenPages.includes(location.pathname);
+
   return (
-    <main style={{ padding: '20px', minHeight: '80vh' }}>
+    <main style={{ 
+      padding: isFullScreenPage ? '0' : '20px', 
+      minHeight: isFullScreenPage ? '100vh' : '80vh' 
+    }}>
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -72,13 +84,12 @@ const Main = () => {
               <ClassPage />
             </PrivateRoute>
           }
-
         />
         <Route
           path="/user/results"
           element={
             <PrivateRoute>
-              < PracticeResults />
+              <PracticeResults />
             </PrivateRoute>
           }
         />
@@ -91,17 +102,17 @@ const Main = () => {
           }
         />
         <Route
-  path="/admin/home"
-  element={
-    <PrivateRoute>
-      <AdminHomePage />
-    </PrivateRoute>
-    
-  }
-  />
-  <Route path="/admin/practice-results" element={<AdminScores />} />
-   <Route path="/practice/start" element={<PracticeStart />} />
-
+          path="/admin/home"
+          element={
+            <PrivateRoute>
+              <AdminHomePage />
+            </PrivateRoute>
+          }
+        />
+        <Route path="/admin/practice-results" element={<AdminScores />} />
+        <Route path="/practice/start" element={<PracticeStart />} />
+         <Route path="/profile" element={<Profile />} />
+        <Route path="/change-password" element={<ChangePassword />} />
 
 
         {/* Root redirect - check authentication */}
@@ -110,7 +121,8 @@ const Main = () => {
           element={<AuthRedirect />}
         />
         <Route path="/questions" element={<QuestionsPage />} />
-         <Route path="/practice" element={<CreatePracticeQuestion />} />
+           <Route path="/help" element={<Help />} />
+        <Route path="/practice" element={<CreatePracticeQuestion />} />
         <Route path="/admin/classes" element={<AdminCreateClass />} />
         <Route path="/join-class" element={<JoinClass />} />
 

@@ -10,3 +10,5 @@ npm-debug.log*
 
 # VSCode config
 .vscode/
+# Ignore avatar uploads
+/uploads/

@@ -76,7 +76,7 @@ router.post('/chat', async (req, res) => {
     const reply = await result.response.text();
     res.json({ reply });
   } catch (err) {
-    console.warn('⚠️ Lỗi gemini-1.5-pro:', err.message);
+ 
 
     // Nếu lỗi là quota, fallback sang gemini-1.5-flash
     if (err.message.includes('quota') || err.message.includes('429')) {

@@ -17,7 +17,9 @@ const userSchema = new mongoose.Schema({
     default: 'user'
   },
   fullName: {
-    type: String
+    type: String,
+    required: true,
+    trim: true
   },
   phone: {
     type: String
@@ -29,14 +31,22 @@ const userSchema = new mongoose.Schema({
   dob: {
     type: Date
   },
+  avatar: {
+    type: String // đường dẫn ảnh đại diện
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'banned'],
+    default: 'active'
+  },
   classes: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Class'  // bạn sẽ tạo collection Class tương ứng
+      ref: 'Class'
     }
   ]
 }, {
-  timestamps: true  // tự tạo createdAt, updatedAt
+  timestamps: true
 });
 
 module.exports = mongoose.model('User', userSchema);

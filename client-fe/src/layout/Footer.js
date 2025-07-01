@@ -1,6 +1,7 @@
 // src/pages/Footer.jsx
 import React from 'react';
 import { Layout, Row, Col, Typography, Space, Divider } from 'antd';
+import { useLocation } from 'react-router-dom';
 import {
   GithubOutlined,
   FacebookOutlined,
@@ -16,7 +17,17 @@ const { Footer: AntFooter } = Layout;
 const { Title, Text, Link } = Typography;
 
 const Footer = () => {
+  const location = useLocation();
   const currentYear = new Date().getFullYear();
+  
+  // Các trang không hiển thị footer
+  const hideFooterPages = ['/login', '/register', '/forgot-password', '/welcome'];
+  const shouldHideFooter = hideFooterPages.includes(location.pathname);
+  
+  // Không render footer nếu đang ở trang auth
+  if (shouldHideFooter) {
+    return null;
+  }
 
   return (
     <AntFooter style={{ 
@@ -41,10 +52,10 @@ const Footer = () => {
                   justifyContent: 'center',
                   fontSize: '20px'
                 }}>
-                  🦆
+                  Q
                 </div>
                 <Title level={4} style={{ color: '#fff', margin: 0 }}>
-                  DuckMen Quiz
+  QuizPro
                 </Title>
               </Space>
               <Text style={{ color: 'rgba(255,255,255,0.8)', display: 'block', lineHeight: '1.6' }}>
@@ -117,7 +128,7 @@ const Footer = () => {
             </Title>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <Link 
-                href="/privacy" 
+                href="/help" 
                 style={{ 
                   color: 'rgba(255,255,255,0.8)', 
                   transition: 'color 0.3s',
@@ -129,7 +140,7 @@ const Footer = () => {
                 🔒 Chính sách bảo mật
               </Link>
               <Link 
-                href="/terms" 
+                href="/help" 
                 style={{ 
                   color: 'rgba(255,255,255,0.8)', 
                   transition: 'color 0.3s',
@@ -141,7 +152,7 @@ const Footer = () => {
                 📋 Điều khoản sử dụng
               </Link>
               <Link 
-                href="/contact" 
+                href="/help" 
                 style={{ 
                   color: 'rgba(255,255,255,0.8)', 
                   transition: 'color 0.3s',
@@ -153,7 +164,7 @@ const Footer = () => {
                 📞 Liên hệ
               </Link>
               <Link 
-                href="/faq" 
+                href="/help" 
                 style={{ 
                   color: 'rgba(255,255,255,0.8)', 
                   transition: 'color 0.3s',
