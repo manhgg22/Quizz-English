@@ -4,6 +4,11 @@ const authMiddleware = require('../middleware/authMiddleware');
 const { register, login, googleLogin } = require('../controllers/authController');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+const { forgotPassword, verifyCode,   } = require('../controllers/authController');
+const { resetPassword } = require('../controllers/authController');
+
+
+
 
 
 // Đăng ký
@@ -12,7 +17,9 @@ router.post('/register', register);
 // Đăng nhập
 router.post('/login', login);
 router.post('/google-login', googleLogin); // m
-
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-code', verifyCode);
+router.post('/reset-password', resetPassword);
 // Profile dành cho tất cả user
 router.get('/profile', authMiddleware(), (req, res) => {
   res.json({ msg: 'Welcome to your profile', user: req.user });
