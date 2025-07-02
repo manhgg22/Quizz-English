@@ -22,10 +22,10 @@ const authMiddleware = (options = {}) => {
   return async (req, res, next) => {
     try {
       const authHeader = req.headers.authorization;
-      console.log('🔐 [AUTH] Header:', authHeader);
+
 
       if ((!authHeader || !authHeader.startsWith('Bearer ')) && optional) {
-        console.log('ℹ️ Không có token nhưng được phép truy cập (optional)');
+
         req.user = null;
         return next();
       }
@@ -40,12 +40,12 @@ const authMiddleware = (options = {}) => {
       }
 
       const token = authHeader.split(' ')[1];
-      console.log('📦 Token:', token);
+ 
 
       let decoded;
       try {
         decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log('✅ Token decoded:', decoded);
+    
       } catch (jwtError) {
         console.error('❌ Lỗi xác thực token:', jwtError.message);
         let message = 'Token không hợp lệ';
@@ -127,7 +127,7 @@ const authMiddleware = (options = {}) => {
         ...(user && { userData: user })
       };
 
-      console.log('🟢 [AUTH SUCCESS] req.user:', req.user);
+ 
 
       next();
     } catch (error) {

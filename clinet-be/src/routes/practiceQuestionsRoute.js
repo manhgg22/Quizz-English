@@ -3,6 +3,8 @@ const router = express.Router();
 const PracticeQuestion = require('../models/PracticeQuestion');
 const PracticeResult = require('../models/PracticeResult'); // ✅ NEW
 const authMiddleware = require('../middleware/authMiddleware');
+const sendNotification = require('../utils/sendNotification');
+
 
 // ✅ [1] Admin tạo câu hỏi ôn tập
 router.post('/', authMiddleware(true), async (req, res) => {
@@ -60,15 +62,15 @@ router.get('/access', authMiddleware(), async (req, res) => {
     }
 
     // ✅ Kiểm tra user đã làm bài này chưa
-    const existingResult = await PracticeResult.findOne({ 
-      userId: req.user.id, 
-      examCode 
+    const existingResult = await PracticeResult.findOne({
+      userId: req.user.id,
+      examCode
     });
 
     if (existingResult) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Bạn đã hoàn thành bài thi này',
-        alreadySubmitted: true 
+        alreadySubmitted: true
       });
     }
 
@@ -140,25 +142,35 @@ router.post('/submit', authMiddleware(), async (req, res) => {
 
     // ✅ Chỉ lưu kết quả nếu không phải luyện tập nhanh
     if (examCode !== 'quick-practice') {
-      await PracticeResult.create({
+      const result = await PracticeResult.create({
         userId,
         examCode,
         correct: correctCount,
         total,
         score: Number(score.toFixed(2))
       });
+
+      // ✅ Gửi thông báo sau khi nộp bài thành công
+      await sendNotification(
+        userId,
+        'Bạn đã hoàn thành bài luyện tập!',
+        `Bạn đạt ${Number(score.toFixed(2))}/10 trong bài "${examCode}".`,
+        'result',
+        result._id.toString()
+      );
     }
 
-   res.json({
-  message: 'Nộp bài thành công',
-  correct: correctCount,
-  total,
-  score: Number(score.toFixed(2)),
-  correctAnswers: questions.map(q => ({
-    questionId: q._id.toString(),
-    correctAnswer: q.correctAnswer
-  }))
-});
+
+    res.json({
+      message: 'Nộp bài thành công',
+      correct: correctCount,
+      total,
+      score: Number(score.toFixed(2)),
+      correctAnswers: questions.map(q => ({
+        questionId: q._id.toString(),
+        correctAnswer: q.correctAnswer
+      }))
+    });
 
   } catch (err) {
     console.error('Lỗi khi nộp bài luyện tập:', err);
