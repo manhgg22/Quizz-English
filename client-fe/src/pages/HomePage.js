@@ -49,7 +49,7 @@ const HomePage = () => {
         marginBottom: '20px'
       }}>
         <div>
-          <h2>👋 Xin chào, {user.email}</h2>
+          <h2>👋 Xin chào, {user.fullName || user.email}</h2>
           <p>Vai trò: {user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</p>
         </div>
         <button

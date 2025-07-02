@@ -44,7 +44,9 @@ const login = async (req, res) => {
     if (!isMatch) return res.status(400).json({ msg: 'Sai mật khẩu' });
 
     const token = jwt.sign(
+      
       {
+        
         userId: user._id,
         role: user.role || 'admin' // nếu Admin không có trường role
       },
@@ -57,7 +59,8 @@ const login = async (req, res) => {
       user: {
         _id: user._id,
         email: user.email,
-        role: user.role || 'admin'
+        role: user.role || 'admin',
+         fullName: user.fullName, 
       }
     });
   } catch (err) {

@@ -22,15 +22,16 @@ const authMiddleware = (options = {}) => {
   return async (req, res, next) => {
     try {
       const authHeader = req.headers.authorization;
+      console.log('🔐 [AUTH] Header:', authHeader);
 
-      // If no token and optional auth, continue without user
       if ((!authHeader || !authHeader.startsWith('Bearer ')) && optional) {
+        console.log('ℹ️ Không có token nhưng được phép truy cập (optional)');
         req.user = null;
         return next();
       }
 
-      // If no token and required auth, return error
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.warn('🚫 Không có token hoặc sai định dạng');
         return res.status(401).json({
           success: false,
           message: 'Token xác thực không được cung cấp',
@@ -39,12 +40,14 @@ const authMiddleware = (options = {}) => {
       }
 
       const token = authHeader.split(' ')[1];
+      console.log('📦 Token:', token);
 
-      // Verify JWT token
       let decoded;
       try {
         decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('✅ Token decoded:', decoded);
       } catch (jwtError) {
+        console.error('❌ Lỗi xác thực token:', jwtError.message);
         let message = 'Token không hợp lệ';
         let code = 'INVALID_TOKEN';
 
@@ -56,15 +59,11 @@ const authMiddleware = (options = {}) => {
           code = 'MALFORMED_TOKEN';
         }
 
-        return res.status(401).json({
-          success: false,
-          message,
-          code
-        });
+        return res.status(401).json({ success: false, message, code });
       }
 
-      // Validate token payload
       if (!decoded.userId) {
+        console.error('❗ Thiếu userId trong token');
         return res.status(401).json({
           success: false,
           message: 'Token thiếu thông tin người dùng',
@@ -72,12 +71,12 @@ const authMiddleware = (options = {}) => {
         });
       }
 
-      // Check if user exists in database (optional)
       let user = null;
       if (checkUser) {
         try {
           user = await User.findById(decoded.userId).select('-password');
           if (!user) {
+            console.warn('🛑 Người dùng không tồn tại');
             return res.status(401).json({
               success: false,
               message: 'Người dùng không tồn tại',
@@ -85,8 +84,8 @@ const authMiddleware = (options = {}) => {
             });
           }
 
-          // Check if user account is active
           if (user.status === 'inactive' || user.status === 'banned') {
+            console.warn('⛔ Tài khoản bị vô hiệu hóa hoặc cấm');
             return res.status(403).json({
               success: false,
               message: 'Tài khoản đã bị vô hiệu hóa',
@@ -94,7 +93,7 @@ const authMiddleware = (options = {}) => {
             });
           }
         } catch (dbError) {
-          console.error('Database error in auth middleware:', dbError);
+          console.error('❌ Lỗi DB:', dbError);
           return res.status(500).json({
             success: false,
             message: 'Lỗi hệ thống khi xác thực',
@@ -103,8 +102,8 @@ const authMiddleware = (options = {}) => {
         }
       }
 
-      // Check admin requirement
       if (requireAdmin && decoded.role !== 'admin') {
+        console.warn('🚫 Không phải admin');
         return res.status(403).json({
           success: false,
           message: 'Chỉ admin mới có quyền truy cập',
@@ -112,8 +111,8 @@ const authMiddleware = (options = {}) => {
         });
       }
 
-      // Check specific roles
       if (roles.length > 0 && !roles.includes(decoded.role)) {
+        console.warn(`🚫 Vai trò "${decoded.role}" không nằm trong roles được phép: ${roles}`);
         return res.status(403).json({
           success: false,
           message: 'Không có quyền truy cập',
@@ -121,23 +120,18 @@ const authMiddleware = (options = {}) => {
         });
       }
 
-      // Attach user info to request
       req.user = {
         id: decoded.userId,
         role: decoded.role,
         email: decoded.email,
-        ...(user && { userData: user }) // Include full user data if fetched
+        ...(user && { userData: user })
       };
 
-      // Log authentication for debugging (optional)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AUTH] User ${decoded.userId} authenticated with role: ${decoded.role}`);
-      }
+      console.log('🟢 [AUTH SUCCESS] req.user:', req.user);
 
       next();
-
     } catch (error) {
-      console.error('Unexpected error in auth middleware:', error);
+      console.error('❗ Lỗi bất ngờ trong middleware xác thực:', error);
       return res.status(500).json({
         success: false,
         message: 'Lỗi hệ thống trong quá trình xác thực',

@@ -11,24 +11,18 @@ router.get('/', authMiddleware(), async (req, res) => {
     let query = {};
     let results;
 
-    // Phân quyền: nếu là admin thì lấy tất cả
     if (req.user.role === 'admin') {
-      // Admin có thể lọc theo examCode và userId
-      if (examCode) {
-        query.examCode = examCode;
-      }
-      if (userId) {
-        query.userId = userId;
-      }
-      results = await PracticeResult.find(query).sort({ submittedAt: -1 });
+      if (examCode) query.examCode = examCode;
+      if (userId) query.userId = userId;
+      results = await PracticeResult.find(query)
+        .populate('userId', 'fullName email') // ✅ populate fullName & email
+        .sort({ submittedAt: -1 });
     } else {
-      // Nếu là học sinh thì chỉ lấy bài của chính họ
       query.userId = req.user.id;
-      // Học sinh có thể lọc theo examCode của chính họ
-      if (examCode) {
-        query.examCode = examCode;
-      }
-      results = await PracticeResult.find(query).sort({ submittedAt: -1 });
+      if (examCode) query.examCode = examCode;
+      results = await PracticeResult.find(query)
+        .populate('userId', 'fullName email') // ✅ populate cho học sinh luôn
+        .sort({ submittedAt: -1 });
     }
 
     res.json(results);
@@ -45,26 +39,28 @@ router.get('/export-excel', authMiddleware(), async (req, res) => {
     let query = {};
     let results;
 
-    // Phân quyền tương tự như API lấy dữ liệu
     if (req.user.role === 'admin') {
       if (examCode) query.examCode = examCode;
       if (userId) query.userId = userId;
-      results = await PracticeResult.find(query).populate('userId', 'username email').sort({ submittedAt: -1 });
+      results = await PracticeResult.find(query)
+        .populate('userId', 'fullName email')
+        .sort({ submittedAt: -1 });
     } else {
       query.userId = req.user.id;
       if (examCode) query.examCode = examCode;
-      results = await PracticeResult.find(query).populate('userId', 'username email').sort({ submittedAt: -1 });
+      results = await PracticeResult.find(query)
+        .populate('userId', 'fullName email')
+        .sort({ submittedAt: -1 });
     }
 
-    // Tạo workbook Excel
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Kết quả làm bài');
 
-    // Định nghĩa header
+    // ✅ Header chính xác
     worksheet.columns = [
       { header: 'STT', key: 'stt', width: 10 },
       { header: 'Mã đề thi', key: 'examCode', width: 15 },
-      { header: 'Tên học sinh', key: 'username', width: 20 },
+      { header: 'Họ và tên', key: 'fullName', width: 25 },
       { header: 'Email', key: 'email', width: 25 },
       { header: 'Số câu đúng', key: 'correct', width: 15 },
       { header: 'Tổng số câu', key: 'total', width: 15 },
@@ -72,7 +68,6 @@ router.get('/export-excel', authMiddleware(), async (req, res) => {
       { header: 'Thời gian nộp', key: 'submittedAt', width: 20 }
     ];
 
-    // Style cho header
     worksheet.getRow(1).eachCell((cell) => {
       cell.font = { bold: true };
       cell.fill = {
@@ -88,12 +83,12 @@ router.get('/export-excel', authMiddleware(), async (req, res) => {
       };
     });
 
-    // Thêm dữ liệu
+    // ✅ Ghi đúng `fullName`
     results.forEach((result, index) => {
       worksheet.addRow({
         stt: index + 1,
         examCode: result.examCode,
-        username: result.userId?.username || 'N/A',
+        fullName: result.userId?.fullName || 'N/A', // ✅ key chính xác
         email: result.userId?.email || 'N/A',
         correct: result.correct,
         total: result.total,
@@ -102,7 +97,6 @@ router.get('/export-excel', authMiddleware(), async (req, res) => {
       });
     });
 
-    // Style cho các cell dữ liệu
     for (let i = 2; i <= results.length + 1; i++) {
       worksheet.getRow(i).eachCell((cell) => {
         cell.border = {
@@ -114,14 +108,9 @@ router.get('/export-excel', authMiddleware(), async (req, res) => {
       });
     }
 
-    // Tạo tên file
     const fileName = `ket-qua-lam-bai-${new Date().toISOString().split('T')[0]}.xlsx`;
-    
-    // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
-    // Ghi file và gửi response
     await workbook.xlsx.write(res);
     res.end();
 
@@ -131,17 +120,17 @@ router.get('/export-excel', authMiddleware(), async (req, res) => {
   }
 });
 
-// API lấy danh sách examCode để làm filter dropdown
+// API lấy danh sách examCode để filter dropdown
 router.get('/exam-codes', authMiddleware(), async (req, res) => {
   try {
     let examCodes;
-    
+
     if (req.user.role === 'admin') {
       examCodes = await PracticeResult.distinct('examCode');
     } else {
       examCodes = await PracticeResult.distinct('examCode', { userId: req.user.id });
     }
-    
+
     res.json(examCodes);
   } catch (err) {
     console.error('❌ Lỗi khi lấy danh sách examCode:', err);
@@ -156,9 +145,12 @@ router.get('/users', authMiddleware(), async (req, res) => {
       return res.status(403).json({ message: 'Chỉ admin mới có quyền truy cập' });
     }
 
-    const User = require('../models/User'); // Giả sử có model User
-    const users = await User.find({ role: { $ne: 'admin' } }, 'username email').sort({ username: 1 });
-    
+    const User = require('../models/User');
+    const users = await User.find(
+      { role: { $ne: 'admin' } },
+      'fullName email'
+    ).sort({ fullName: 1 }); // ✅ sort đúng theo fullName
+
     res.json(users);
   } catch (err) {
     console.error('❌ Lỗi khi lấy danh sách user:', err);

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const router = express.Router();
 const Class = require('../models/Classes');
 const authMiddleware = require('../middleware/authMiddleware');
+const sendNotification = require('../utils/sendNotification');
 
 router.post('/', authMiddleware(), async (req, res) => {
   try {
@@ -19,6 +20,14 @@ router.post('/', authMiddleware(), async (req, res) => {
     // ✅ ép userId về ObjectId
     foundClass.students.push(new mongoose.Types.ObjectId(userId));
     await foundClass.save();
+   await sendNotification(
+  userId,
+  'Tham gia lớp học thành công',
+  `Bạn đã tham gia lớp "${foundClass.name}"`,
+  'system',
+  foundClass._id
+);
+
 
     res.json({ message: 'Tham gia lớp thành công' });
   } catch (err) {

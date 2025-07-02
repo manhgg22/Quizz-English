@@ -303,6 +303,13 @@ router.post('/:id/change-password', auth, passwordValidation, async (req, res) =
       password: hashedNew,
       updatedAt: new Date()
     });
+    await Notification.create({
+  userId,
+  title: 'Đổi mật khẩu thành công',
+  message: `Bạn đã đổi mật khẩu vào lúc ${new Date().toLocaleString('vi-VN')}`,
+  type: 'system'
+});
+
 
     res.json({ success: true, message: 'Đổi mật khẩu thành công' });
 
@@ -374,41 +381,41 @@ router.get('/:id/stats', auth, async (req, res) => {
 });
 
 // GET /api/users/:id/notifications - Lấy thông báo người dùng
-router.get('/:id/notifications', auth, async (req, res) => {
-  try {
-    const userId = req.params.id;
+// router.get('/:id/notifications', auth, async (req, res) => {
+//   try {
+//     const userId = req.params.id;
 
-    // Kiểm tra quyền truy cập
-    if (req.user.id !== userId && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Không có quyền truy cập thông tin này'
-      });
-    }
+//     // Kiểm tra quyền truy cập
+//     if (req.user.id !== userId && req.user.role !== 'admin') {
+//       return res.status(403).json({
+//         success: false,
+//         message: 'Không có quyền truy cập thông tin này'
+//       });
+//     }
 
-    // Lấy thông báo (giả sử bạn có model Notification)
-    const notifications = [];
+//     // Lấy thông báo (giả sử bạn có model Notification)
+//     const notifications = [];
     
-    /*
-    const Notification = require('../models/Notification');
-    const notifications = await Notification.find({ userId: userId })
-      .sort({ createdAt: -1 })
-      .limit(20);
-    */
+//     /*
+//     const Notification = require('../models/Notification');
+//     const notifications = await Notification.find({ userId: userId })
+//       .sort({ createdAt: -1 })
+//       .limit(20);
+//     */
 
-    res.json({
-      success: true,
-      data: notifications
-    });
+//     res.json({
+//       success: true,
+//       data: notifications
+//     });
 
-  } catch (error) {
-    console.error('Error getting notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi server khi lấy thông báo'
-    });
-  }
-});
+//   } catch (error) {
+//     console.error('Error getting notifications:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Lỗi server khi lấy thông báo'
+//     });
+//   }
+// });
 
 // DELETE /api/users/:id - Xóa tài khoản
 router.delete('/:id', auth, async (req, res) => {

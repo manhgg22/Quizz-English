@@ -7,7 +7,8 @@ const joinClassRoute = require('../routes/joinClassRoute');
 const practiceQuestionsRoute = require('../routes/practiceQuestionsRoute');
 const practiceStartRoute = require('../routes/practiceStartRoute');
 const practiceResultRoute = require('../routes/practiceResultRoute');
-const profileRoutes = require('../routes/profile');
+const notificationRoutes = require('../routes/notificationRoutes');
+const profileRoutes = require('../routes/notificationRoutes');
 const explainRouter = require('./explain');
 const cors = require('cors')
 const passport = require('passport');
@@ -35,6 +36,8 @@ server.use('/api/practice-results', practiceResultRoute);
 server.use('/api/explain', explainRouter);
 server.use('/api/users', profileRoutes);
 server.use('/api/uploads', express.static('uploads'));
+server.use('/api/notifications', notificationRoutes); 
+
 
 
 
