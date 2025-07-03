@@ -28,13 +28,13 @@ const Main = () => {
   const location = useLocation();
   
   // Các trang không cần padding và minHeight
-  const fullScreenPages = ['/login', '/register', '/forgot-password', '/welcome'];
+  const fullScreenPages = ['/login', '/register', '/forgot-password', '/welcome', 'admin/home'];
   const isFullScreenPage = fullScreenPages.includes(location.pathname);
 
   return (
-    <main style={{ 
-      padding: isFullScreenPage ? '0' : '20px', 
+    <main style={{  padding: isFullScreenPage ? '0' : '20px', 
       minHeight: isFullScreenPage ? '100vh' : '80vh' 
+     
     }}>
       <Routes>
         {/* Public routes */}

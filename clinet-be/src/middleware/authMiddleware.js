@@ -47,7 +47,7 @@ const authMiddleware = (options = {}) => {
         decoded = jwt.verify(token, process.env.JWT_SECRET);
     
       } catch (jwtError) {
-        console.error('❌ Lỗi xác thực token:', jwtError.message);
+
         let message = 'Token không hợp lệ';
         let code = 'INVALID_TOKEN';
 

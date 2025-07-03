@@ -470,7 +470,7 @@ const AdminDashboard = () => {
       }}>
         <Spin size="large" />
         <Text style={{ marginLeft: 16, color: 'white', fontSize: 16 }}>
-          Đang tải dữ liệu từ cổng 9999...
+          Đang tải dữ liệu từ server
         </Text>
       </div>
     );
@@ -500,9 +500,7 @@ const AdminDashboard = () => {
           <Title level={4} style={{ color: 'white', marginTop: 16, marginBottom: 6 }}>
             Admin Dashboard
           </Title>
-          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>
-            Hệ thống quản lý học tập (Port 9999)
-          </Text>
+  
         </div>
 
         <Menu
@@ -541,9 +539,7 @@ const AdminDashboard = () => {
             <Title level={2} style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>
               Dashboard Quản Trị
             </Title>
-            <Text style={{ color: '#64748b', fontSize: 14 }}>
-              Chào mừng bạn quay trở lại - API Port 9999
-            </Text>
+          
           </div>
           <Space size="large">
             <Button
@@ -568,7 +564,8 @@ const AdminDashboard = () => {
           </Space>
         </Header>
 
-        <Content style={{ margin: '24px', background: '#f1f5f9', minHeight: 'calc(100vh - 112px)' }}>
+      <Content style={{ margin: '24px', background: '#f1f5f9' }}>
+
           {/* Statistics Cards */}
           <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
             {stats.map((stat, index) => (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Layout, 
@@ -37,22 +37,48 @@ const Header = () => {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
   
+  // Refs để track trạng thái và tránh duplicate calls
+  const lastFetchTime = useRef(0);
+  const isFetching = useRef(false);
+  const notificationInterval = useRef(null);
+  const abortController = useRef(null);
+  
   const { token } = theme.useToken();
   const location = useLocation();
   const navigate = useNavigate();
   
   const API_BASE = 'http://localhost:9999/api';
   const hideHeaderPaths = ['/login', '/register', '/forgot-password', '/welcome'];
+  const CACHE_DURATION = 30000; // 30 giây cache
+  const POLL_INTERVAL = 60000; // Poll mỗi 60 giây thay vì 3 giây
 
-  // Load user data with error handling
-  const loadUserData = useCallback(async (userId, token) => {
+  // Optimized load user data với caching và debouncing
+  const loadUserData = useCallback(async (userId, authToken, forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Kiểm tra cache và tránh duplicate calls
+    if (!forceRefresh && (now - lastFetchTime.current < CACHE_DURATION || isFetching.current)) {
+      return;
+    }
+
+    // Cancel previous request nếu có
+    if (abortController.current) {
+      abortController.current.abort();
+    }
+    
+    abortController.current = new AbortController();
+    isFetching.current = true;
+    lastFetchTime.current = now;
+
     try {
       const [statsRes, notifsRes] = await Promise.all([
         fetch(`${API_BASE}/users/${userId}/stats`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${authToken}` },
+          signal: abortController.current.signal
         }),
         fetch(`${API_BASE}/notifications/${userId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${authToken}` },
+          signal: abortController.current.signal
         })
       ]);
 
@@ -66,19 +92,27 @@ const Header = () => {
 
       if (notifsRes.ok) {
         const notifs = await notifsRes.json();
-        // Kiểm tra cấu trúc dữ liệu và đảm bảo luôn có array
         const notificationData = notifs?.data || notifs || [];
         setNotifications(Array.isArray(notificationData) ? notificationData : []);
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
-      setNotifications([]); // Reset về array rỗng khi có lỗi
+      if (error.name !== 'AbortError') {
+        console.error('Error loading user data:', error);
+        setNotifications([]);
+      }
+    } finally {
+      isFetching.current = false;
     }
   }, [API_BASE]);
 
-  // Refresh notifications function
-  const refreshNotifications = useCallback(async () => {
+  // Optimized refresh notifications - chỉ refresh khi cần
+  const refreshNotifications = useCallback(async (forceRefresh = false) => {
     if (!user) return;
+    
+    const now = Date.now();
+    if (!forceRefresh && (now - lastFetchTime.current < CACHE_DURATION || isFetching.current)) {
+      return;
+    }
     
     try {
       const token = localStorage.getItem('token');
@@ -89,7 +123,15 @@ const Header = () => {
       if (response.ok) {
         const notifs = await response.json();
         const notificationData = notifs?.data || notifs || [];
-        setNotifications(Array.isArray(notificationData) ? notificationData : []);
+        const newNotifications = Array.isArray(notificationData) ? notificationData : [];
+        
+        // Chỉ update state nếu có thay đổi
+        setNotifications(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(newNotifications)) {
+            return newNotifications;
+          }
+          return prev;
+        });
       }
     } catch (error) {
       console.error('Error refreshing notifications:', error);
@@ -106,7 +148,7 @@ const Header = () => {
         if (token && userData) {
           const user = JSON.parse(userData);
           setUser(user);
-          loadUserData(user._id, token);
+          loadUserData(user._id, token, true); // Force refresh on initial load
         }
       } catch (error) {
         console.error('Error loading user:', error);
@@ -128,7 +170,7 @@ const Header = () => {
         try {
           const user = JSON.parse(userData);
           setUser(user);
-          loadUserData(user._id, token);
+          loadUserData(user._id, token, true); // Force refresh on login
         } catch (error) {
           console.error('Error handling login success:', error);
         }
@@ -142,18 +184,62 @@ const Header = () => {
     };
   }, [loadUserData]);
 
-
-
-
+  // Optimized polling với interval dài hơn và smart refresh
   useEffect(() => {
     if (!user) return;
 
-    const interval = setInterval(() => {
-      refreshNotifications();
-    }, 3000); 
+    // Clear existing interval
+    if (notificationInterval.current) {
+      clearInterval(notificationInterval.current);
+    }
 
-    return () => clearInterval(interval);
+    // Chỉ poll khi tab active và user đang online
+    const startPolling = () => {
+      notificationInterval.current = setInterval(() => {
+        if (!document.hidden) { // Chỉ poll khi tab active
+          refreshNotifications();
+        }
+      }, POLL_INTERVAL);
+    };
+
+    // Start polling
+    startPolling();
+
+    // Handle visibility change để tối ưu polling
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab inactive - stop polling
+        if (notificationInterval.current) {
+          clearInterval(notificationInterval.current);
+        }
+      } else {
+        // Tab active - resume polling và refresh ngay
+        refreshNotifications(true);
+        startPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (notificationInterval.current) {
+        clearInterval(notificationInterval.current);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [user, refreshNotifications]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+      if (notificationInterval.current) {
+        clearInterval(notificationInterval.current);
+      }
+    };
+  }, []);
 
   // Handle marking all notifications as read
   const handleMarkAllRead = async () => {
@@ -219,6 +305,13 @@ const Header = () => {
     }
   };
 
+  // Manual refresh với loading state
+  const handleManualRefresh = async () => {
+    if (!user) return;
+    await refreshNotifications(true);
+    message.success('Đã làm mới thông báo');
+  };
+
   // Notification dropdown configuration
   const notificationDropdown = {
     items: [
@@ -252,7 +345,7 @@ const Header = () => {
                 <Button
                   type="link"
                   size="small"
-                  onClick={refreshNotifications}
+                  onClick={handleManualRefresh}
                   style={{ fontSize: '12px', padding: 0 }}
                 >
                   🔄 Làm mới
@@ -323,6 +416,14 @@ const Header = () => {
   };
 
   const handleLogout = () => {
+    // Clear intervals và abort requests
+    if (notificationInterval.current) {
+      clearInterval(notificationInterval.current);
+    }
+    if (abortController.current) {
+      abortController.current.abort();
+    }
+    
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);

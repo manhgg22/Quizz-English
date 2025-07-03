@@ -61,7 +61,8 @@ const AdminClassManagement = () => {
 
   const fetchTests = async () => {
     try {
-      const res = await axios.get('http://localhost:9999/api/tests', {
+      const res = await axios.get('http://localhost:9999/api/practice-results/exam-codes', {
+        
         headers: { Authorization: 'Bearer ' + token },
       });
       setTestOptions(res.data);
