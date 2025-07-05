@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Input, Button, Select, Typography, Divider, InputNumber, Card, List, Modal, Steps, Space, Alert } from 'antd';
+import { Input, Button, Select, Typography, Divider, InputNumber, Card, List, Modal, Steps, Space, Alert, Layout } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import AdminSidebar from './AdminSidebar';
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { Title, Text } = Typography;
 const { Step } = Steps;
+const { Content } = Layout;
 
 const AdminCreatePraticeQuestion = () => {
   // Step management
@@ -462,64 +464,79 @@ const AdminCreatePraticeQuestion = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-8">
-      <div className="mb-12">
-        <Title level={2} className="text-center mb-4">
-          Tạo Bài Ôn Tập Trắc Nghiệm
-        </Title>
-        <div className="text-center text-gray-600 mb-8">
-          Tạo bài ôn tập với nhiều câu hỏi trắc nghiệm một cách dễ dàng
+  <Layout style={{ minHeight: '100vh' }}>
+    <AdminSidebar selectedKey="exams" setSelectedKey={() => {}} />
+
+    <Layout style={{ padding: '24px 32px', background: '#f5f5f5' }}>
+      <Content
+        style={{
+          background: '#fff',
+          padding: 24,
+          margin: 0,
+          borderRadius: 8,
+          minHeight: 'calc(100vh - 48px)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+        }}
+      >
+        {/* Nội dung */}
+        <div className="mb-12">
+          <Title level={2} className="text-center mb-4">
+            Tạo Bài Ôn Tập Trắc Nghiệm
+          </Title>
+          <div className="text-center text-gray-600 mb-8">
+            Tạo bài ôn tập với nhiều câu hỏi trắc nghiệm một cách dễ dàng
+          </div>
         </div>
-      </div>
 
-      <div className="mb-12">
-        <Steps current={currentStep} size="default">
-          <Step title="Thiết lập" description="Thông tin cơ bản" />
-          <Step title="Câu hỏi" description="Thêm câu hỏi" />
-          <Step title="Hoàn thành" description="Xác nhận và gửi" />
-        </Steps>
-      </div>
-
-      <div className="min-h-[500px] mb-12">
-        {renderStepContent()}
-      </div>
-
-      <div className="border-t pt-8">
-        <div className="flex justify-between items-center">
-          <Button 
-            onClick={handlePrevStep} 
-            disabled={currentStep === 0}
-            size="large"
-          >
-            Quay lại
-          </Button>
-
-          <Space size="large">
-            {currentStep === 1 && questionList.length > 0 && (
-              <Button 
-                onClick={() => setCurrentStep(2)}
-                type="primary"
-                size="large"
-              >
-                Xem trước và gửi
-              </Button>
-            )}
-            
-            {currentStep < 2 && (
-              <Button 
-                type="primary"
-                onClick={handleNextStep}
-                disabled={currentStep === 0 && !validateExamSetup()}
-                size="large"
-              >
-                Tiếp tục
-              </Button>
-            )}
-          </Space>
+        <div className="mb-12">
+          <Steps current={currentStep} size="default">
+            <Step title="Thiết lập" description="Thông tin cơ bản" />
+            <Step title="Câu hỏi" description="Thêm câu hỏi" />
+            <Step title="Hoàn thành" description="Xác nhận và gửi" />
+          </Steps>
         </div>
-      </div>
-    </div>
-  );
+
+        <div className="min-h-[500px] mb-12">{renderStepContent()}</div>
+
+        <div className="border-t pt-8">
+          <div className="flex justify-between items-center">
+            <Button
+              onClick={handlePrevStep}
+              disabled={currentStep === 0}
+              size="large"
+            >
+              Quay lại
+            </Button>
+
+            <Space size="large">
+              {currentStep === 1 && questionList.length > 0 && (
+                <Button
+                  onClick={() => setCurrentStep(2)}
+                  type="primary"
+                  size="large"
+                >
+                  Xem trước và gửi
+                </Button>
+              )}
+
+              {currentStep < 2 && (
+                <Button
+                  type="primary"
+                  onClick={handleNextStep}
+                  disabled={currentStep === 0 && !validateExamSetup()}
+                  size="large"
+                >
+                  Tiếp tục
+                </Button>
+              )}
+            </Space>
+          </div>
+        </div>
+      </Content>
+    </Layout>
+  </Layout>
+);
+
 };
 
 export default AdminCreatePraticeQuestion;

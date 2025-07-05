@@ -38,6 +38,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import AdminSidebar from '../pages/AdminSidebar';
 
 const { Header, Content, Sider } = Layout;
 const { Title, Text } = Typography;
@@ -150,7 +151,7 @@ const AdminDashboard = () => {
 
         // Parallel API calls with enhanced error handling
         const apiCalls = [
-          makeAuthenticatedRequest('/api/classes'),
+         
           makeAuthenticatedRequest('/api/classes'), // This seems to be for students, you might need a different endpoint
           makeAuthenticatedRequest('/api/practice-questions'),
           fetchPracticeResults(), // Use the fixed function
@@ -168,10 +169,13 @@ const AdminDashboard = () => {
         // Process students data (you might need a separate endpoint for students)
         const studentsResult = results[1];
         const students = studentsResult.status === 'fulfilled' && studentsResult.value ? studentsResult.value.data : [];
-        const totalStudents = Array.isArray(students) ? students.length : 0;
+       const totalStudents = Array.isArray(classes)
+  ? classes.reduce((sum, cls) => sum + (cls.students?.length || 0), 0)
+  : 0;
+
 
         // Process exams data
-        const examsResult = results[2];
+       const examsResult = results[1];
         let totalSets = 0;
         let examList = [];
 
@@ -182,7 +186,7 @@ const AdminDashboard = () => {
         }
 
         // Process practice results data - FIXED
-        const practiceResultsResult = results[3];
+        const practiceResultsResult = results[2];
         let practiceResults = [];
         if (practiceResultsResult.status === 'fulfilled' && practiceResultsResult.value) {
           practiceResults = Array.isArray(practiceResultsResult.value) ? practiceResultsResult.value : [];
@@ -209,7 +213,7 @@ const AdminDashboard = () => {
         const pendingScores = practiceResults.filter(result => result.score === null || result.score === undefined).length;
 
         // Process topics data
-        const topicsResult = results[4];
+        const topicsResult = results[3];
         const topics = topicsResult.status === 'fulfilled' && topicsResult.value ? topicsResult.value.data : [];
 
         // Generate recent activities from actual data
@@ -477,92 +481,12 @@ const AdminDashboard = () => {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider
-        width={260}
-        style={{
-          background: 'linear-gradient(145deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%)',
-          boxShadow: '4px 0 20px rgba(0,0,0,0.1)'
-        }}
-      >
-        <div style={{
-          padding: '24px',
-          textAlign: 'center',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)'
-        }}>
-          <Avatar size={72} style={{
-            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-            border: '3px solid rgba(255,255,255,0.2)'
-          }}>
-            <UserOutlined style={{ fontSize: 32 }} />
-          </Avatar>
-          <Title level={4} style={{ color: 'white', marginTop: 16, marginBottom: 6 }}>
-            Admin Dashboard
-          </Title>
-  
-        </div>
+    <Layout>
+       <AdminSidebar selectedKey="home" setSelectedKey={() => {}} />
 
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          onClick={handleMenuClick}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            marginTop: 16,
-            paddingInline: 8
-          }}
-          items={menuItems.map(item => ({
-            ...item,
-            style: {
-              borderRadius: 8,
-              margin: '4px 0',
-              height: 44
-            }
-          }))}
-        />
-      </Sider>
 
       <Layout>
-        <Header style={{
-          background: 'linear-gradient(90deg, #ffffff 0%, #f8fafc 100%)',
-          padding: '0 32px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
-          borderBottom: '1px solid #e2e8f0'
-        }}>
-          <div>
-            <Title level={2} style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>
-              Dashboard Quản Trị
-            </Title>
-          
-          </div>
-          <Space size="large">
-            <Button
-              type="text"
-              icon={<RiseOutlined />}
-              onClick={refreshData}
-              style={{ color: '#64748b' }}
-            >
-              Làm mới
-            </Button>
-            <Button
-              type="text"
-              danger
-              onClick={handleLogout}
-              style={{ color: '#dc2626' }}
-            >
-              Đăng xuất
-            </Button>
-            <Avatar style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}>
-              Admin
-            </Avatar>
-          </Space>
-        </Header>
+        
 
       <Content style={{ margin: '24px', background: '#f1f5f9' }}>
 

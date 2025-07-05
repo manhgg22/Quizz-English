@@ -12,13 +12,15 @@ import {
   Row, 
   Col, 
   Space,
-  Statistic 
+  Statistic, 
+  Layout,
 } from 'antd';
 import { DownloadOutlined, FilterOutlined, ReloadOutlined } from '@ant-design/icons';
+import AdminSidebar from './AdminSidebar';
 
 const { Title } = Typography;
 const { Option } = Select;
-
+const { Content } = Layout;
 const AdminScores = () => {
   const [data, setData] = useState([]);
   const [chartData, setChartData] = useState([]);
@@ -299,7 +301,10 @@ const AdminScores = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <Layout>
+       <AdminSidebar selectedKey="practice-results" setSelectedKey={() => {}} />
+         <Layout style={{ flex: 1 }}>
+      <Content style={{ padding: 24 }}>
       <Title level={2}>📊 Thống kê điểm số học sinh</Title>
 
       {/* Filter Section */}
@@ -437,7 +442,10 @@ const AdminScores = () => {
           </Card>
         </>
       )}
-    </div>
+
+      </Content>
+    </Layout>
+    </Layout>
   );
 };
 

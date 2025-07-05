@@ -15,9 +15,11 @@ import {
   Col,
   Alert,
   Empty,
-  Avatar
+  Avatar,
+  Layout
 } from 'antd';
 import axios from 'axios';
+import AdminSidebar from '../pages/AdminSidebar';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -277,7 +279,9 @@ const AdminClassManagement = () => {
   }, []);
 
   return (
-    <div style={{ 
+    <Layout style={{ minHeight: '100vh' }}>
+        <AdminSidebar selectedKey="classes" setSelectedKey={() => {}} />
+    <Layout.Content style={{ 
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       padding: '24px'
@@ -585,7 +589,10 @@ const AdminClassManagement = () => {
           />
         )}
       </Modal>
-    </div>
+      
+    </Layout.Content>
+   
+    </Layout>
   );
 };
 

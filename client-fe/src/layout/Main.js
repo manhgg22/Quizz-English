@@ -23,12 +23,13 @@ import Help from '../pages/Help';
 import Profile from '../pages/Profile';
 import ChangePassword from '../pages/ChangePassword';
 import GoogleCallback from '../pages/google-callback';
+import TopicManagement from '../pages/TopicManagement';
 
 const Main = () => {
   const location = useLocation();
   
   // Các trang không cần padding và minHeight
-  const fullScreenPages = ['/login', '/register', '/forgot-password', '/welcome', 'admin/home'];
+  const fullScreenPages = ['/login','/admin/topics','/admin/practice-results', '/register', '/forgot-password', '/welcome', '/admin/home','/admin/classes','/admin/exams'];
   const isFullScreenPage = fullScreenPages.includes(location.pathname);
 
   return (
@@ -115,6 +116,7 @@ const Main = () => {
          <Route path="/profile" element={<Profile />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/google-callback" element={<GoogleCallback />} />
+        <Route path="/admin/topics" element={<TopicManagement />} />
         
 
 

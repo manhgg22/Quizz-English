@@ -305,6 +305,44 @@ router.get('/topics', authMiddleware(), async (req, res) => {
   }
 });
 
+// GET /api/practice-questions/topics
+router.get('/topics', async (req, res) => {
+  try {
+    const topics = await PracticeQuestion.distinct('topic');
+    res.json({ topics });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Không thể lấy danh sách chủ đề.' });
+  }
+});
+// DELETE /api/practice-questions/topics/:name
+router.delete('/topics/:name', async (req, res) => {
+  try {
+    const topicName = decodeURIComponent(req.params.name);
+    const result = await PracticeQuestion.deleteMany({ topic: topicName });
+    res.json({ message: `Đã xoá ${result.deletedCount} câu hỏi trong chủ đề "${topicName}"` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Xoá chủ đề thất bại.' });
+  }
+});
+// PUT /api/practice-questions/topics/:name
+router.put('/topics/:name', async (req, res) => {
+  try {
+    const oldName = decodeURIComponent(req.params.name);
+    const { newName } = req.body;
+
+    const result = await PracticeQuestion.updateMany(
+      { topic: oldName },
+      { $set: { topic: newName } }
+    );
+
+    res.json({ message: `✅ Đã cập nhật ${result.modifiedCount} câu hỏi sang chủ đề "${newName}"` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Cập nhật chủ đề thất bại.' });
+  }
+});
 
 
 module.exports = router;
