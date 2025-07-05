@@ -1,30 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import AdminSidebar from './AdminSidebar';
-import { 
-  Card, 
-  Button, 
-  Input, 
-  message, 
-  Typography, 
-  Space, 
-  Layout,
-  Row,
-  Col,
-  Tag,
-  Empty,
-  Spin,
-  Modal,
-  Form,
-  Alert
+import {
+  Card, Button, Input, message, Typography, Space, Layout,
+  Row, Col, Tag, Empty, Spin, Modal, Form, Alert
 } from 'antd';
-import { 
-  EditOutlined, 
-  DeleteOutlined,
-  ReloadOutlined,
-  TagOutlined,
-  ExclamationCircleOutlined,
-  WarningOutlined
+import {
+  EditOutlined, DeleteOutlined, ReloadOutlined,
+  TagOutlined, ExclamationCircleOutlined, WarningOutlined
 } from '@ant-design/icons';
+import AdminQuestionManager from '../pages/AdminQuestionManager';
 
 const { Title, Text } = Typography;
 const { Content } = Layout;
@@ -33,26 +17,29 @@ const { confirm } = Modal;
 const API_BASE_URL = 'http://localhost:9999';
 
 const AdminTopicManager = () => {
-  const [topics, setTopics] = useState([]);
+  const [topicList, setTopicList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingTopic, setEditingTopic] = useState(null);
   const [form] = Form.useForm();
 
-  // Fetch all distinct topics
+  // ✅ State quản lý xem chi tiết đề
+  const [selectedExamCode, setSelectedExamCode] = useState(null);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+
   const fetchTopics = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/practice-questions/topics`, {
+      const res = await fetch(`${API_BASE_URL}/api/practice-questions/`, {
         headers: {
           Authorization: 'Bearer ' + localStorage.getItem('token')
         }
       });
-      const data = await response.json();
-      setTopics(data.topics || []);
+      const data = await res.json();
+      setTopicList(data.exams || []);
     } catch (err) {
       console.error(err);
-      message.error('Không thể tải danh sách chủ đề.');
+      message.error('Không thể tải danh sách chủ đề và mã đề');
     } finally {
       setLoading(false);
     }
@@ -62,16 +49,15 @@ const AdminTopicManager = () => {
     fetchTopics();
   }, []);
 
-  // Open edit modal
   const handleEditClick = (topic) => {
     setEditingTopic(topic);
     form.setFieldsValue({ newName: topic });
     setEditModalVisible(true);
   };
 
-  // Handle edit submit
   const handleEditSubmit = async (values) => {
-    if (!values.newName.trim()) {
+    const newName = values.newName.trim();
+    if (!newName) {
       message.warning('Tên chủ đề không được để trống');
       return;
     }
@@ -83,7 +69,7 @@ const AdminTopicManager = () => {
           'Content-Type': 'application/json',
           Authorization: 'Bearer ' + localStorage.getItem('token')
         },
-        body: JSON.stringify({ newName: values.newName })
+        body: JSON.stringify({ newName })
       });
 
       const result = await response.json();
@@ -102,42 +88,36 @@ const AdminTopicManager = () => {
     }
   };
 
-  // Handle delete with confirmation
-  const handleDeleteClick = (topicName) => {
+  const handleDeleteClick = (topic, examCode) => {
     confirm({
-      title: 'Xác nhận xóa chủ đề',
+      title: `Xác nhận xóa chủ đề "${topic}" và mã đề "${examCode}"?`,
       icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
       content: (
-        <div>
-          <Alert
-            message="Cảnh báo!"
-            description={
-              <div>
-                <p>Bạn có chắc chắn muốn xóa chủ đề <strong>"{topicName}"</strong>?</p>
-                <p style={{ color: '#ff4d4f', marginBottom: 0 }}>
-                  <WarningOutlined style={{ marginRight: 4 }} />
-                  Hành động này không thể hoàn tác và sẽ ảnh hưởng đến tất cả câu hỏi thuộc chủ đề này.
-                </p>
-              </div>
-            }
-            type="warning"
-            showIcon
-            style={{ marginTop: 16 }}
-          />
-        </div>
+        <Alert
+          message="Cảnh báo!"
+          description={
+            <div>
+              <p>Xóa toàn bộ câu hỏi thuộc chủ đề <strong>{topic}</strong> và mã đề <strong>{examCode}</strong>.</p>
+              <p style={{ color: '#ff4d4f' }}>
+                <WarningOutlined style={{ marginRight: 4 }} />
+                Hành động này không thể hoàn tác.
+              </p>
+            </div>
+          }
+          type="warning"
+          showIcon
+        />
       ),
       okText: 'Xóa',
       okType: 'danger',
       cancelText: 'Hủy',
-      width: 500,
-      onOk: () => handleDelete(topicName),
+      onOk: () => handleDelete(topic, examCode),
     });
   };
 
-  // Delete topic
-  const handleDelete = async (topicName) => {
+  const handleDelete = async (topic, examCode) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/practice-questions/topics/${encodeURIComponent(topicName)}`, {
+      const response = await fetch(`${API_BASE_URL}/api/practice-questions/combo-delete?topic=${encodeURIComponent(topic)}&examCode=${encodeURIComponent(examCode)}`, {
         method: 'DELETE',
         headers: {
           Authorization: 'Bearer ' + localStorage.getItem('token')
@@ -146,123 +126,138 @@ const AdminTopicManager = () => {
 
       const result = await response.json();
       if (response.ok) {
-        message.success(result.message || 'Đã xóa chủ đề');
+        message.success(result.message || 'Đã xoá chủ đề + mã đề');
         fetchTopics();
       } else {
         throw new Error(result.message);
       }
     } catch (err) {
       console.error(err);
-      message.error('Lỗi khi xóa chủ đề');
+      message.error('Lỗi khi xoá');
     }
   };
 
-  const renderTopicCard = (topic) => (
-    <Card 
-      key={topic}
+  const renderTopicCard = (item) => (
+    <Card
+      key={`${item.topic}-${item.examCode}`}
       size="small"
-      style={{ 
+      hoverable
+      onClick={() => {
+        setSelectedExamCode(item.examCode);
+        setSelectedTopic(item.topic);
+      }}
+      style={{
         marginBottom: 12,
         borderRadius: 8,
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        transition: 'all 0.3s ease'
+        cursor: 'pointer',
       }}
-      bodyStyle={{ padding: '16px' }}
-      hoverable
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ flex: 1 }}>
-          <Space>
-            <Tag color="blue" icon={<TagOutlined />}>
-              {topic}
-            </Tag>
+      <Row justify="space-between" align="middle">
+        <Col flex="auto">
+          <Space direction="vertical">
+            <Tag icon={<TagOutlined />} color="blue">{item.topic}</Tag>
+            <Text code>Mã đề: {item.examCode}</Text>
+            <Text type="secondary">
+              Câu hỏi: {item.totalQuestions} | Thời gian: {item.duration} phút
+            </Text>
           </Space>
-        </div>
-        
-        <Space size="small">
-          <Button
-            icon={<EditOutlined />}
-            size="small"
-            type="primary"
-            ghost
-            onClick={() => handleEditClick(topic)}
-          >
-            Sửa
-          </Button>
-          <Button
-            icon={<DeleteOutlined />}
-            size="small"
-            danger
-            onClick={() => handleDeleteClick(topic)}
-          >
-            Xóa
-          </Button>
-        </Space>
-      </div>
+        </Col>
+        <Col>
+          <Space size="small">
+            <Button
+              icon={<EditOutlined />}
+              size="small"
+              type="primary"
+              ghost
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditClick(item.topic);
+              }}
+            >
+              Sửa
+            </Button>
+            <Button
+              icon={<DeleteOutlined />}
+              size="small"
+              danger
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClick(item.topic, item.examCode);
+              }}
+            >
+              Xóa
+            </Button>
+          </Space>
+        </Col>
+      </Row>
     </Card>
   );
 
+  // ✅ Giao diện chính
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <AdminSidebar selectedKey="topics" setSelectedKey={() => {}} />
       <Layout>
         <Content style={{ padding: '24px' }}>
-          <div style={{ maxWidth: 800, margin: '0 auto' }}>
-            {/* Header */}
-            <Card style={{ marginBottom: 24, borderRadius: 12 }}>
-              <Row justify="space-between" align="middle">
-                <Col>
-                  <Title level={3} style={{ margin: 0 }}>
-                    <TagOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-                    Quản lý chủ đề
-                  </Title>
-                  <Text type="secondary">
-                    Tổng cộng {topics.length} chủ đề
-                  </Text>
-                </Col>
-                <Col>
-                  <Button
-                    icon={<ReloadOutlined />}
-                    onClick={fetchTopics}
-                    loading={loading}
-                    type="primary"
-                  >
-                    Tải lại
-                  </Button>
-                </Col>
-              </Row>
-            </Card>
+          <div style={{ maxWidth: 900, margin: '0 auto' }}>
+            {!selectedExamCode ? (
+              <>
+                {/* Header */}
+                <Card style={{ marginBottom: 24, borderRadius: 12 }}>
+                  <Row justify="space-between" align="middle">
+                    <Col>
+                      <Title level={3} style={{ margin: 0 }}>
+                        <TagOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                        Quản lý chủ đề & mã đề
+                      </Title>
+                      <Text type="secondary">
+                        Tổng cộng {topicList.length} nhóm
+                      </Text>
+                    </Col>
+                    <Col>
+                      <Button
+                        icon={<ReloadOutlined />}
+                        onClick={fetchTopics}
+                        loading={loading}
+                        type="primary"
+                      >
+                        Tải lại
+                      </Button>
+                    </Col>
+                  </Row>
+                </Card>
 
-            {/* Topics List */}
-            <Card 
-              style={{ borderRadius: 12 }}
-              bodyStyle={{ padding: '24px' }}
-            >
-              <Spin spinning={loading}>
-                {topics.length === 0 ? (
-                  <Empty 
-                    description="Chưa có chủ đề nào"
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  />
-                ) : (
-                  <div>
-                    {topics.map(topic => renderTopicCard(topic))}
-                  </div>
-                )}
-              </Spin>
-            </Card>
+                {/* Danh sách đề */}
+                <Card style={{ borderRadius: 12 }}>
+                  <Spin spinning={loading}>
+                    {topicList.length === 0 ? (
+                      <Empty description="Chưa có dữ liệu" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                    ) : (
+                      <div>{topicList.map(renderTopicCard)}</div>
+                    )}
+                  </Spin>
+                </Card>
+              </>
+            ) : (
+              // ✅ Hiển thị AdminQuestionManager khi đã chọn đề
+              <AdminQuestionManager
+                examCode={selectedExamCode}
+                topic={selectedTopic}
+                onBack={() => {
+                  setSelectedExamCode(null);
+                  setSelectedTopic(null);
+                  fetchTopics();
+                }}
+              />
+            )}
           </div>
         </Content>
       </Layout>
 
-      {/* Edit Modal */}
+      {/* Modal sửa */}
       <Modal
-        title={
-          <div>
-            <EditOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-            Sửa tên chủ đề
-          </div>
-        }
+        title={<><EditOutlined style={{ marginRight: 8 }} />Sửa chủ đề</>}
         open={editModalVisible}
         onCancel={() => {
           setEditModalVisible(false);
@@ -272,37 +267,26 @@ const AdminTopicManager = () => {
         onOk={() => form.submit()}
         okText="Lưu"
         cancelText="Hủy"
-        width={500}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleEditSubmit}
-        >
-          <Form.Item
-            label="Tên chủ đề hiện tại"
-          >
+        <Form form={form} layout="vertical" onFinish={handleEditSubmit}>
+          <Form.Item label="Tên chủ đề hiện tại">
             <Input value={editingTopic} disabled />
           </Form.Item>
-          
           <Form.Item
             label="Tên chủ đề mới"
             name="newName"
             rules={[
-              { required: true, message: 'Vui lòng nhập tên chủ đề mới' },
-              { min: 1, message: 'Tên chủ đề phải có ít nhất 1 ký tự' },
-              { max: 100, message: 'Tên chủ đề không được vượt quá 100 ký tự' }
+              { required: true, message: 'Vui lòng nhập tên mới' },
+              { min: 1, message: 'Ít nhất 1 ký tự' }
             ]}
           >
             <Input placeholder="Nhập tên chủ đề mới" />
           </Form.Item>
-
           <Alert
             message="Lưu ý"
-            description="Việc đổi tên chủ đề sẽ ảnh hưởng đến tất cả câu hỏi thuộc chủ đề này."
+            description="Đổi tên sẽ áp dụng với tất cả mã đề có cùng chủ đề."
             type="info"
             showIcon
-            style={{ marginTop: 16 }}
           />
         </Form>
       </Modal>

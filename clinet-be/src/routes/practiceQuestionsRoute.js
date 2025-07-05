@@ -343,6 +343,142 @@ router.put('/topics/:name', async (req, res) => {
     res.status(500).json({ message: 'Cập nhật chủ đề thất bại.' });
   }
 });
+router.get('/metadata', authMiddleware(true), async (req, res) => {
+  try {
+    const topics = await PracticeQuestion.distinct('topic');
+    const examCodes = await PracticeQuestion.distinct('examCode');
+    res.json({ topics, examCodes });
+  } catch (err) {
+    console.error('Lỗi lấy metadata:', err);
+    res.status(500).json({ message: 'Không thể lấy metadata.' });
+  }
+});
+// DELETE /api/practice-questions/combo-delete?topic=Toán&examCode=de123
+router.delete('/combo-delete', authMiddleware(true), async (req, res) => {
+  try {
+    const { topic, examCode } = req.query;
+
+    if (!topic || !examCode) {
+      return res.status(400).json({ message: 'Thiếu topic hoặc examCode' });
+    }
+
+    const result = await PracticeQuestion.deleteMany({ topic, examCode });
+
+    res.json({
+      message: `✅ Đã xoá ${result.deletedCount} câu hỏi có topic "${topic}" và mã đề "${examCode}"`
+    });
+  } catch (err) {
+    console.error('❌ Lỗi xoá theo topic & examCode:', err);
+    res.status(500).json({ message: 'Xoá thất bại' });
+  }
+});
+// GET /api/practice-questions/list/:examCode
+router.get('/list/:examCode', authMiddleware(true), async (req, res) => {
+  try {
+    const examCode = req.params.examCode;
+    const questions = await PracticeQuestion.find({ examCode }).sort({ createdAt: -1 });
+
+    if (!questions.length) {
+      return res.status(404).json({ message: 'Không tìm thấy câu hỏi cho mã đề này' });
+    }
+
+    res.json({
+      examCode,
+      totalQuestions: questions.length,
+      questions
+    });
+  } catch (err) {
+    console.error('Lỗi lấy danh sách câu hỏi theo mã đề:', err);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+// GET /api/practice-questions/:id
+router.get('/:id', authMiddleware(true), async (req, res) => {
+  try {
+    const question = await PracticeQuestion.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Không tìm thấy câu hỏi' });
+    }
+    res.json(question);
+  } catch (err) {
+    console.error('Lỗi lấy chi tiết câu hỏi:', err);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+// PUT /api/practice-questions/:id
+router.put('/:id', authMiddleware(true), async (req, res) => {
+  try {
+    const { question, topic, options, correctAnswer, duration } = req.body;
+
+    if (!question || !correctAnswer || !Array.isArray(options) || options.length !== 4) {
+      return res.status(400).json({ message: 'Dữ liệu không hợp lệ' });
+    }
+
+    const updated = await PracticeQuestion.findByIdAndUpdate(
+      req.params.id,
+      { question, topic, options, correctAnswer, duration },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Không tìm thấy câu hỏi để cập nhật' });
+    }
+
+    res.json({ message: '✅ Đã cập nhật câu hỏi', question: updated });
+  } catch (err) {
+    console.error('Lỗi cập nhật câu hỏi:', err);
+    res.status(500).json({ message: 'Không thể cập nhật câu hỏi' });
+  }
+});
+// DELETE /api/practice-questions/:id?examCode=de123
+router.delete('/:id', authMiddleware(true), async (req, res) => {
+  try {
+    const { examCode } = req.query;
+    const question = await PracticeQuestion.findById(req.params.id);
+
+    if (!question) {
+      return res.status(404).json({ message: 'Không tìm thấy câu hỏi' });
+    }
+
+    if (question.examCode !== examCode) {
+      return res.status(403).json({ message: 'Không đúng mã đề, không được phép xoá' });
+    }
+
+    await PracticeQuestion.findByIdAndDelete(req.params.id);
+    res.json({ message: '✅ Đã xoá câu hỏi thành công' });
+  } catch (err) {
+    console.error('Lỗi xoá câu hỏi:', err);
+    res.status(500).json({ message: 'Không thể xoá câu hỏi' });
+  }
+});
+// POST /api/practice-questions/add-one
+router.post('/add-one', authMiddleware(true), async (req, res) => {
+  try {
+    const { topic, examCode, question, options, correctAnswer, duration } = req.body;
+
+    if (!topic || !examCode || !question || !correctAnswer || !Array.isArray(options) || options.length !== 4) {
+      return res.status(400).json({ message: 'Thiếu hoặc sai dữ liệu' });
+    }
+
+    const newQuestion = await PracticeQuestion.create({
+      topic,
+      examCode,
+      question,
+      options,
+      correctAnswer,
+      duration: duration || 10
+    });
+
+    res.status(201).json({
+      message: '✅ Đã thêm câu hỏi mới',
+      question: newQuestion
+    });
+  } catch (err) {
+    console.error('Lỗi thêm câu hỏi:', err);
+    res.status(500).json({ message: 'Không thể thêm câu hỏi' });
+  }
+});
+
 
 
 module.exports = router;
