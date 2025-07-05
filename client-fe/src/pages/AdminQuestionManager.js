@@ -22,6 +22,9 @@ const AdminQuestionManager = ({ examCode }) => {
   const [openModal, setOpenModal] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('');
+  const [previewOptions, setPreviewOptions] = useState('');
+  const [viewDetailModal, setViewDetailModal] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [form] = Form.useForm();
 
   const fetchQuestions = async () => {
@@ -44,9 +47,15 @@ const AdminQuestionManager = ({ examCode }) => {
     if (examCode) fetchQuestions();
   }, [examCode]);
 
+  const handleView = (record) => {
+    setSelectedQuestion(record);
+    setViewDetailModal(true);
+  };
+
   const handleEdit = (record) => {
     setEditing(record);
     form.setFieldsValue(record);
+    setPreviewOptions(record.options || '');
     setOpenModal(true);
   };
 
@@ -126,20 +135,36 @@ const AdminQuestionManager = ({ examCode }) => {
       ellipsis: {
         showTitle: false,
       },
-      render: text => (
-        <Tooltip title={text} placement="topLeft">
-          <div style={{ maxWidth: 300 }}>
-            <QuestionCircleOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-            {text}
-          </div>
-        </Tooltip>
-      )
+      render: (text, record) => (
+  <Tooltip title="Nhấn để xem chi tiết" placement="topLeft">
+    <div 
+      style={{ 
+        maxWidth: 300, 
+        cursor: 'pointer',
+        padding: '8px',
+        borderRadius: '4px',
+        transition: 'all 0.2s'
+      }}
+      onMouseEnter={(e) => {
+        e.target.style.backgroundColor = '#f0f8ff';
+      }}
+      onMouseLeave={(e) => {
+        e.target.style.backgroundColor = 'transparent';
+      }}
+      onClick={() => handleView(record)}
+    >
+      <QuestionCircleOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+      {text}
+    </div>
+  </Tooltip>
+)
+
     },
     {
       title: 'Chủ đề',
       dataIndex: 'topic',
       key: 'topic',
-      width: 120,
+      width: 150,
       render: topic => topic ? (
         <Tag color="blue" icon={<BookOutlined />}>
           {topic}
@@ -152,41 +177,61 @@ const AdminQuestionManager = ({ examCode }) => {
       title: 'Đáp án',
       dataIndex: 'options',
       key: 'options',
-      width: 200,
-      render: options => {
+      width: 250,
+      render: (options, record) => {
         if (!options || typeof options !== 'string') {
           return <Tag color="default">Chưa có</Tag>;
         }
-        const optionList = options.split('|').map(opt => opt.trim()).filter(Boolean);
+        
+        const optionList = Array.isArray(options)
+  ? options
+  : (typeof options === 'string'
+      ? options.split('|').map(opt => opt.trim()).filter(Boolean)
+      : []);
+
         if (optionList.length === 0) {
           return <Tag color="default">Chưa có</Tag>;
         }
+
+        const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+        const correctAnswer = record.correctAnswer;
+        
         return (
-          <div>
-            {optionList.slice(0, 2).map((opt, idx) => (
-              <Tag key={idx} color="geekblue" style={{ marginBottom: 4 }}>
-                {opt.length > 20 ? `${opt.substring(0, 20)}...` : opt}
-              </Tag>
-            ))}
-            {optionList.length > 2 && (
-              <Tooltip title={optionList.slice(2).join(', ')}>
-                <Tag color="default">+{optionList.length - 2} khác</Tag>
-              </Tooltip>
-            )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {optionList.map((opt, idx) => {
+              const isCorrect = opt === correctAnswer;
+              return (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Badge 
+                    count={letters[idx]} 
+                    style={{ 
+                      backgroundColor: isCorrect ? '#52c41a' : '#1890ff',
+                      fontSize: '12px',
+                      minWidth: '20px',
+                      height: '20px',
+                      lineHeight: '20px'
+                    }} 
+                  />
+                  <span style={{ 
+                    fontSize: '13px',
+                    fontWeight: isCorrect ? 'bold' : 'normal',
+                    color: isCorrect ? '#52c41a' : '#666',
+                    maxWidth: '180px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {opt}
+                  </span>
+                  {isCorrect && (
+                    <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '14px' }} />
+                  )}
+                </div>
+              );
+            })}
           </div>
         );
       }
-    },
-    {
-      title: 'Đáp án đúng',
-      dataIndex: 'correctAnswer',
-      key: 'correctAnswer',
-      width: 150,
-      render: val => (
-        <Tag color="green" icon={<CheckCircleOutlined />}>
-          {val}
-        </Tag>
-      )
     },
     {
       title: 'Thời gian',
@@ -206,6 +251,14 @@ const AdminQuestionManager = ({ examCode }) => {
       fixed: 'right',
       render: (_, record) => (
         <Space>
+          <Tooltip title="Xem chi tiết">
+            <Button 
+              type="default" 
+              size="small"
+              icon={<QuestionCircleOutlined />} 
+              onClick={() => handleView(record)}
+            />
+          </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <Button 
               type="primary" 
@@ -282,6 +335,7 @@ const AdminQuestionManager = ({ examCode }) => {
                 onClick={() => {
                   setEditing(null);
                   form.resetFields();
+                  setPreviewOptions('');
                   setOpenModal(true);
                 }}
               >
@@ -340,12 +394,13 @@ const AdminQuestionManager = ({ examCode }) => {
         onCancel={() => {
           setOpenModal(false);
           form.resetFields();
+          setPreviewOptions('');
           setEditing(null);
         }}
         onOk={() => form.submit()}
         okText={editing ? 'Cập nhật' : 'Thêm mới'}
         cancelText="Huỷ"
-        width={800}
+        width={1000}
         destroyOnClose
       >
         <Divider />
@@ -454,6 +509,7 @@ const AdminQuestionManager = ({ examCode }) => {
               rows={3} 
               placeholder="Ví dụ: Đáp án A | Đáp án B | Đáp án C | Đáp án D"
               showCount
+              onChange={(e) => setPreviewOptions(e.target.value)}
             />
           </Form.Item>
 
@@ -471,7 +527,269 @@ const AdminQuestionManager = ({ examCode }) => {
               placeholder="Nhập đáp án đúng (phải khớp với một trong các đáp án ở trên)"
             />
           </Form.Item>
+
+          {/* Preview đáp án với layout 4 cột */}
+          {previewOptions && (
+            <div style={{ marginTop: 16 }}>
+              <Title level={4} style={{ color: '#1890ff', marginBottom: 16 }}>
+                Xem trước các đáp án:
+              </Title>
+              
+              {(() => {
+                const correctAnswer = form.getFieldValue('correctAnswer') || '';
+               const optionList = Array.isArray(previewOptions)
+  ? previewOptions
+  : typeof previewOptions === 'string'
+    ? previewOptions.split('|').map(opt => opt.trim()).filter(Boolean)
+    : [];
+
+                
+                if (optionList.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '32px' }}>
+                      <Empty description="Nhập đáp án để xem preview" />
+                    </div>
+                  );
+                }
+
+                const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+                return (
+                  <Row gutter={[16, 16]}>
+                    {optionList.map((option, index) => {
+                      const isCorrect = option.trim() === correctAnswer.trim();
+                      return (
+                        <Col key={index} xs={24} sm={12} md={12} lg={6}>
+                          <div style={{
+                            padding: '16px',
+                            borderRadius: '8px',
+                            border: `2px solid ${isCorrect ? '#52c41a' : '#d9d9d9'}`,
+                            backgroundColor: isCorrect ? '#f6ffed' : '#ffffff',
+                            position: 'relative',
+                            minHeight: '100px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            transition: 'all 0.3s'
+                          }}>
+                            <div style={{
+                              position: 'absolute',
+                              top: '-12px',
+                              left: '16px',
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              backgroundColor: isCorrect ? '#52c41a' : '#1890ff',
+                              color: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 'bold',
+                              fontSize: '14px'
+                            }}>
+                              {letters[index]}
+                            </div>
+                            <div style={{
+                              marginLeft: '16px',
+                              flex: 1,
+                              fontSize: '14px',
+                              color: isCorrect ? '#52c41a' : '#333',
+                              fontWeight: isCorrect ? 'bold' : 'normal',
+                              wordBreak: 'break-word'
+                            }}>
+                              {option}
+                            </div>
+                            {isCorrect && (
+                              <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
+                                <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '16px' }} />
+                              </div>
+                            )}
+                          </div>
+                        </Col>
+                      );
+                    })}
+                  </Row>
+                );
+              })()}
+            </div>
+          )}
         </Form>
+      </Modal>
+
+      {/* Modal xem chi tiết câu hỏi */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <QuestionCircleOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            Chi tiết câu hỏi
+          </div>
+        }
+        open={viewDetailModal}
+        onCancel={() => setViewDetailModal(false)}
+        footer={[
+          <Button key="close" onClick={() => setViewDetailModal(false)}>
+            Đóng
+          </Button>,
+          <Button 
+            key="edit" 
+            type="primary" 
+            icon={<EditOutlined />}
+            onClick={() => {
+              setViewDetailModal(false);
+              handleEdit(selectedQuestion);
+            }}
+          >
+            Chỉnh sửa
+          </Button>
+        ]}
+        width={800}
+      >
+        {selectedQuestion && (
+          <div style={{ padding: '16px 0' }}>
+            {/* Thông tin câu hỏi */}
+            <div style={{ marginBottom: 24 }}>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text strong style={{ color: '#1890ff' }}>
+                      <BookOutlined style={{ marginRight: 8 }} />
+                      Chủ đề:
+                    </Text>
+                    <Tag color="blue" style={{ marginLeft: 8 }}>
+                      {selectedQuestion.topic || 'Chưa có'}
+                    </Tag>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text strong style={{ color: '#1890ff' }}>
+                      <ClockCircleOutlined style={{ marginRight: 8 }} />
+                      Thời gian:
+                    </Text>
+                    <Tag color="orange" style={{ marginLeft: 8 }}>
+                      {selectedQuestion.duration} phút
+                    </Tag>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+
+            <Divider />
+
+            {/* Câu hỏi */}
+            <div style={{ marginBottom: 24 }}>
+              <Title level={4} style={{ color: '#1890ff', marginBottom: 16 }}>
+                <QuestionCircleOutlined style={{ marginRight: 8 }} />
+                Câu hỏi:
+              </Title>
+              <div style={{ 
+                padding: '16px', 
+                backgroundColor: '#f0f8ff', 
+                borderRadius: '8px',
+                border: '1px solid #d9d9d9',
+                fontSize: '16px',
+                lineHeight: '1.6'
+              }}>
+                {selectedQuestion.question}
+              </div>
+            </div>
+
+            {/* Các phương án */}
+            <div>
+              <Title level={4} style={{ color: '#1890ff', marginBottom: 16 }}>
+                Các phương án:
+              </Title>
+              
+              {(() => {
+  const { options, correctAnswer } = selectedQuestion;
+
+  if (!options || (!Array.isArray(options) && typeof options !== 'string')) {
+    return (
+      <div style={{ textAlign: 'center', padding: '32px' }}>
+        <Empty description="Chưa có phương án" />
+      </div>
+    );
+  }
+
+  const optionList = Array.isArray(options)
+    ? options
+    : options.split('|').map(opt => opt.trim()).filter(Boolean);
+
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  return (
+    <Row gutter={[16, 16]}>
+      {optionList.map((option, index) => {
+        const isCorrect = option.trim() === correctAnswer.trim();
+        return (
+          <Col key={index} xs={24} sm={12}>
+            <div style={{
+              padding: '16px',
+              borderRadius: '8px',
+              border: `2px solid ${isCorrect ? '#52c41a' : '#d9d9d9'}`,
+              backgroundColor: isCorrect ? '#f6ffed' : '#ffffff',
+              position: 'relative',
+              minHeight: '80px',
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: '-12px',
+                left: '16px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                backgroundColor: isCorrect ? '#52c41a' : '#1890ff',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '14px'
+              }}>
+                {letters[index]}
+              </div>
+              <div style={{
+                marginLeft: '16px',
+                flex: 1,
+                fontSize: '15px',
+                color: isCorrect ? '#52c41a' : '#333',
+                fontWeight: isCorrect ? 'bold' : 'normal'
+              }}>
+                {option}
+              </div>
+              {isCorrect && (
+                <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
+                  <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '20px' }} />
+                </div>
+              )}
+            </div>
+          </Col>
+        );
+      })}
+    </Row>
+  );
+})()}
+
+            </div>
+
+            {/* Đáp án đúng */}
+            <div style={{ marginTop: 24, textAlign: 'center' }}>
+              <div style={{
+                display: 'inline-block',
+                padding: '12px 24px',
+                backgroundColor: '#f6ffed',
+                border: '1px solid #b7eb8f',
+                borderRadius: '6px'
+              }}>
+                <Text strong style={{ color: '#52c41a' }}>
+                  <CheckCircleOutlined style={{ marginRight: 8 }} />
+                  Đáp án đúng: {selectedQuestion.correctAnswer}
+                </Text>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
