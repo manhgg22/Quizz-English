@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   Table, Button, Modal, Form, Input, Select, Space, message, Popconfirm, Tag, Card, 
-  Typography, Row, Col, Divider, Tooltip, Badge, Empty, Spin, Alert
+  Typography, Row, Col, Divider, Tooltip, Badge, Empty, Spin, Alert, 
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, 
   QuestionCircleOutlined, BookOutlined, ClockCircleOutlined, CheckCircleOutlined,
-  ReloadOutlined, FilterOutlined
+  ReloadOutlined, FilterOutlined,ArrowLeftOutlined
 } from '@ant-design/icons';
+import { useNavigate, useLocation,useParams  } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -22,10 +23,23 @@ const AdminQuestionManager = ({ examCode }) => {
   const [openModal, setOpenModal] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('');
-  const [previewOptions, setPreviewOptions] = useState('');
   const [viewDetailModal, setViewDetailModal] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [form] = Form.useForm();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+//   navigate(`api/practice-questions/${examCode}`, {
+//   state: { from: 'topic-management' }
+// });
+const handleBack = () => {
+  if (location.state?.from === 'topic-management') {
+    navigate('/admin/exams'); // ← đây là route của trang Quản lý chủ đề & mã đề
+  } else {
+    navigate(-1); // fallback nếu không có state
+  }
+};
+
 
   const fetchQuestions = async () => {
     setLoading(true);
@@ -53,11 +67,24 @@ const AdminQuestionManager = ({ examCode }) => {
   };
 
   const handleEdit = (record) => {
-    setEditing(record);
-    form.setFieldsValue(record);
-    setPreviewOptions(record.options || '');
-    setOpenModal(true);
-  };
+  const formValues = { ...record };
+
+  const optionList = Array.isArray(record.options)
+    ? record.options
+    : (typeof record.options === 'string'
+        ? record.options.split('|').map(opt => opt.trim()).filter(Boolean)
+        : []);
+
+  formValues.optionA = optionList[0] || '';
+  formValues.optionB = optionList[1] || '';
+  formValues.optionC = optionList[2] || '';
+  formValues.optionD = optionList[3] || '';
+
+  form.setFieldsValue(formValues);
+  setEditing(record);
+  setOpenModal(true);
+};
+
 
   const handleDelete = async (id) => {
     try {
@@ -78,7 +105,26 @@ const AdminQuestionManager = ({ examCode }) => {
   };
 
   const handleSubmit = async (values) => {
-    const payload = { ...values, examCode };
+    // Chuyển đổi từ 4 input riêng thành format string
+  const options = [
+  values.optionA?.trim(),
+  values.optionB?.trim(),
+  values.optionC?.trim(),
+  values.optionD?.trim()
+];
+
+
+    const payload = { 
+      ...values, 
+      examCode,
+      options
+    };
+
+    // Xóa các field không cần thiết
+    delete payload.optionA;
+    delete payload.optionB;
+    delete payload.optionC;
+    delete payload.optionD;
 
     const url = editing ? `${API}/${editing._id}` : `${API}/add-one`;
     const method = editing ? 'PUT' : 'POST';
@@ -136,29 +182,28 @@ const AdminQuestionManager = ({ examCode }) => {
         showTitle: false,
       },
       render: (text, record) => (
-  <Tooltip title="Nhấn để xem chi tiết" placement="topLeft">
-    <div 
-      style={{ 
-        maxWidth: 300, 
-        cursor: 'pointer',
-        padding: '8px',
-        borderRadius: '4px',
-        transition: 'all 0.2s'
-      }}
-      onMouseEnter={(e) => {
-        e.target.style.backgroundColor = '#f0f8ff';
-      }}
-      onMouseLeave={(e) => {
-        e.target.style.backgroundColor = 'transparent';
-      }}
-      onClick={() => handleView(record)}
-    >
-      <QuestionCircleOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-      {text}
-    </div>
-  </Tooltip>
-)
-
+        <Tooltip title="Nhấn để xem chi tiết" placement="topLeft">
+          <div 
+            style={{ 
+              maxWidth: 300, 
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: '4px',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#f0f8ff';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'transparent';
+            }}
+            onClick={() => handleView(record)}
+          >
+            <QuestionCircleOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            {text}
+          </div>
+        </Tooltip>
+      )
     },
     {
       title: 'Chủ đề',
@@ -184,10 +229,10 @@ const AdminQuestionManager = ({ examCode }) => {
         }
         
         const optionList = Array.isArray(options)
-  ? options
-  : (typeof options === 'string'
-      ? options.split('|').map(opt => opt.trim()).filter(Boolean)
-      : []);
+          ? options
+          : (typeof options === 'string'
+              ? options.split('|').map(opt => opt.trim()).filter(Boolean)
+              : []);
 
         if (optionList.length === 0) {
           return <Tag color="default">Chưa có</Tag>;
@@ -292,14 +337,26 @@ const AdminQuestionManager = ({ examCode }) => {
     <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
       <Card>
         <div style={{ marginBottom: 24 }}>
-          <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
-            <BookOutlined style={{ marginRight: 12 }} />
-            Quản lý câu hỏi {examCode && `- ${examCode}`}
-          </Title>
-          <Text type="secondary">
-            Tổng cộng {questions.length} câu hỏi
-          </Text>
-        </div>
+  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+    <Button 
+      icon={<ArrowLeftOutlined />} 
+      onClick={handleBack}
+      style={{ marginRight: 16 }}
+    >
+      Quay lại
+    </Button>
+
+    <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
+      <BookOutlined style={{ marginRight: 12 }} />
+      Quản lý câu hỏi {examCode && `- ${examCode}`}
+    </Title>
+  </div>
+
+  <Text type="secondary">
+    Tổng cộng {questions.length} câu hỏi
+  </Text>
+</div>
+
 
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={24} sm={12} md={8}>
@@ -335,7 +392,6 @@ const AdminQuestionManager = ({ examCode }) => {
                 onClick={() => {
                   setEditing(null);
                   form.resetFields();
-                  setPreviewOptions('');
                   setOpenModal(true);
                 }}
               >
@@ -394,7 +450,6 @@ const AdminQuestionManager = ({ examCode }) => {
         onCancel={() => {
           setOpenModal(false);
           form.resetFields();
-          setPreviewOptions('');
           setEditing(null);
         }}
         onOk={() => form.submit()}
@@ -481,37 +536,130 @@ const AdminQuestionManager = ({ examCode }) => {
             </Col>
           </Row>
 
-          <Form.Item
-            label={
-              <span>
-                Các đáp án
-                <Tooltip title="Nhập các đáp án cách nhau bởi dấu | (pipe)">
-                  <QuestionCircleOutlined style={{ marginLeft: 8 }} />
-                </Tooltip>
-              </span>
-            }
-            name="options"
-            rules={[
-              { required: true, message: 'Vui lòng nhập đáp án!' },
-              {
-                validator: (_, value) => {
-                  if (!value || typeof value !== 'string') return Promise.resolve();
-                  const options = value.split('|').map(opt => opt.trim()).filter(Boolean);
-                  if (options.length < 2) {
-                    return Promise.reject(new Error('Cần ít nhất 2 đáp án!'));
+          {/* Các đáp án riêng biệt */}
+          <div style={{ marginBottom: 24 }}>
+            <Title level={4} style={{ color: '#1890ff', marginBottom: 16 }}>
+              Các đáp án:
+            </Title>
+            
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  label={
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        backgroundColor: '#1890ff',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '12px',
+                        marginRight: '8px'
+                      }}>
+                        A
+                      </div>
+                      Đáp án A
+                    </div>
                   }
-                  return Promise.resolve();
-                }
-              }
-            ]}
-          >
-            <TextArea 
-              rows={3} 
-              placeholder="Ví dụ: Đáp án A | Đáp án B | Đáp án C | Đáp án D"
-              showCount
-              onChange={(e) => setPreviewOptions(e.target.value)}
-            />
-          </Form.Item>
+                  name="optionA"
+                  rules={[{ required: true, message: 'Vui lòng nhập đáp án A!' }]}
+                >
+                  <Input placeholder="Nhập đáp án A..." />
+                </Form.Item>
+              </Col>
+              
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  label={
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        backgroundColor: '#1890ff',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '12px',
+                        marginRight: '8px'
+                      }}>
+                        B
+                      </div>
+                      Đáp án B
+                    </div>
+                  }
+                  name="optionB"
+                  rules={[{ required: true, message: 'Vui lòng nhập đáp án B!' }]}
+                >
+                  <Input placeholder="Nhập đáp án B..." />
+                </Form.Item>
+              </Col>
+              
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  label={
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        backgroundColor: '#1890ff',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '12px',
+                        marginRight: '8px'
+                      }}>
+                        C
+                      </div>
+                      Đáp án C
+                    </div>
+                  }
+                  name="optionC"
+                  rules={[{ required: true, message: 'Vui lòng nhập đáp án C!' }]}
+                >
+                  <Input placeholder="Nhập đáp án C..." />
+                </Form.Item>
+              </Col>
+              
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  label={
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        backgroundColor: '#1890ff',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '12px',
+                        marginRight: '8px'
+                      }}>
+                        D
+                      </div>
+                      Đáp án D
+                    </div>
+                  }
+                  name="optionD"
+                  rules={[{ required: true, message: 'Vui lòng nhập đáp án D!' }]}
+                >
+                  <Input placeholder="Nhập đáp án D..." />
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
 
           <Form.Item
             label={
@@ -521,52 +669,82 @@ const AdminQuestionManager = ({ examCode }) => {
               </span>
             }
             name="correctAnswer"
-            rules={[{ required: true, message: 'Vui lòng nhập đáp án đúng!' }]}
+            rules={[{ required: true, message: 'Vui lòng chọn đáp án đúng!' }]}
           >
-            <Input 
-              placeholder="Nhập đáp án đúng (phải khớp với một trong các đáp án ở trên)"
-            />
+            <Select placeholder="Chọn đáp án đúng">
+              <Option value={form.getFieldValue('optionA')}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Badge count="A" style={{ backgroundColor: '#52c41a', marginRight: '8px' }} />
+                  {form.getFieldValue('optionA') || 'Đáp án A'}
+                </div>
+              </Option>
+              <Option value={form.getFieldValue('optionB')}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Badge count="B" style={{ backgroundColor: '#52c41a', marginRight: '8px' }} />
+                  {form.getFieldValue('optionB') || 'Đáp án B'}
+                </div>
+              </Option>
+              <Option value={form.getFieldValue('optionC')}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Badge count="C" style={{ backgroundColor: '#52c41a', marginRight: '8px' }} />
+                  {form.getFieldValue('optionC') || 'Đáp án C'}
+                </div>
+              </Option>
+              <Option value={form.getFieldValue('optionD')}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Badge count="D" style={{ backgroundColor: '#52c41a', marginRight: '8px' }} />
+                  {form.getFieldValue('optionD') || 'Đáp án D'}
+                </div>
+              </Option>
+            </Select>
           </Form.Item>
 
-          {/* Preview đáp án với layout 4 cột */}
-          {previewOptions && (
-            <div style={{ marginTop: 16 }}>
-              <Title level={4} style={{ color: '#1890ff', marginBottom: 16 }}>
-                Xem trước các đáp án:
-              </Title>
+          {/* Preview đáp án */}
+          <Form.Item shouldUpdate={(prevValues, currentValues) => {
+            return prevValues.optionA !== currentValues.optionA ||
+                   prevValues.optionB !== currentValues.optionB ||
+                   prevValues.optionC !== currentValues.optionC ||
+                   prevValues.optionD !== currentValues.optionD ||
+                   prevValues.correctAnswer !== currentValues.correctAnswer;
+          }}>
+            {({ getFieldValue }) => {
+              const optionA = getFieldValue('optionA');
+              const optionB = getFieldValue('optionB');
+              const optionC = getFieldValue('optionC');
+              const optionD = getFieldValue('optionD');
+              const correctAnswer = getFieldValue('correctAnswer');
+
+              const options = [optionA, optionB, optionC, optionD].filter(Boolean);
               
-              {(() => {
-                const correctAnswer = form.getFieldValue('correctAnswer') || '';
-               const optionList = Array.isArray(previewOptions)
-  ? previewOptions
-  : typeof previewOptions === 'string'
-    ? previewOptions.split('|').map(opt => opt.trim()).filter(Boolean)
-    : [];
+              if (options.length === 0) {
+                return null;
+              }
 
-                
-                if (optionList.length === 0) {
-                  return (
-                    <div style={{ textAlign: 'center', padding: '32px' }}>
-                      <Empty description="Nhập đáp án để xem preview" />
-                    </div>
-                  );
-                }
-
-                const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
-
-                return (
+              return (
+                <div style={{ marginTop: 24 }}>
+                  <Title level={4} style={{ color: '#1890ff', marginBottom: 16 }}>
+                    Xem trước các đáp án:
+                  </Title>
+                  
                   <Row gutter={[16, 16]}>
-                    {optionList.map((option, index) => {
-                      const isCorrect = option.trim() === correctAnswer.trim();
+                    {[
+                      { value: optionA, letter: 'A' },
+                      { value: optionB, letter: 'B' },
+                      { value: optionC, letter: 'C' },
+                      { value: optionD, letter: 'D' }
+                    ].map(({ value, letter }, index) => {
+                      if (!value) return null;
+                      
+                      const isCorrect = value === correctAnswer;
                       return (
-                        <Col key={index} xs={24} sm={12} md={12} lg={6}>
+                        <Col key={index} xs={24} sm={12}>
                           <div style={{
                             padding: '16px',
                             borderRadius: '8px',
                             border: `2px solid ${isCorrect ? '#52c41a' : '#d9d9d9'}`,
                             backgroundColor: isCorrect ? '#f6ffed' : '#ffffff',
                             position: 'relative',
-                            minHeight: '100px',
+                            minHeight: '80px',
                             display: 'flex',
                             alignItems: 'center',
                             transition: 'all 0.3s'
@@ -586,7 +764,7 @@ const AdminQuestionManager = ({ examCode }) => {
                               fontWeight: 'bold',
                               fontSize: '14px'
                             }}>
-                              {letters[index]}
+                              {letter}
                             </div>
                             <div style={{
                               marginLeft: '16px',
@@ -596,7 +774,7 @@ const AdminQuestionManager = ({ examCode }) => {
                               fontWeight: isCorrect ? 'bold' : 'normal',
                               wordBreak: 'break-word'
                             }}>
-                              {option}
+                              {value}
                             </div>
                             {isCorrect && (
                               <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
@@ -608,10 +786,10 @@ const AdminQuestionManager = ({ examCode }) => {
                       );
                     })}
                   </Row>
-                );
-              })()}
-            </div>
-          )}
+                </div>
+              );
+            }}
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -676,7 +854,7 @@ const AdminQuestionManager = ({ examCode }) => {
             <Divider />
 
             {/* Câu hỏi */}
-            <div style={{ marginBottom: 24 }}>
+             <div style={{ marginBottom: 24 }}>
               <Title level={4} style={{ color: '#1890ff', marginBottom: 16 }}>
                 <QuestionCircleOutlined style={{ marginRight: 8 }} />
                 Câu hỏi:
@@ -792,6 +970,7 @@ const AdminQuestionManager = ({ examCode }) => {
         )}
       </Modal>
     </div>
+    
   );
 };
 

@@ -82,7 +82,36 @@ const AdminDashboard = () => {
       }
     };
   };
+  const handleExportPracticeResults = async () => {
+  try {
+    const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
 
+    const response = await axios.get(`${API_BASE_URL}/api/practice-results/export-excel`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      responseType: 'blob' // Quan trọng để download file
+    });
+
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bang-diem-${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    message.success('✅ Xuất điểm thành công!');
+  } catch (error) {
+    console.error('❌ Xuất điểm thất bại:', error);
+    message.error('Xuất điểm thất bại');
+  }
+};
   // Enhanced API call wrapper with error handling
   const makeAuthenticatedRequest = async (url, options = {}) => {
     const authConfig = getAuthConfig();
@@ -397,7 +426,7 @@ const AdminDashboard = () => {
       title: 'Xuất điểm',
       icon: <DownloadOutlined />,
       color: '#dc2626',
-      path: '/admin/export',
+     onClick: handleExportPracticeResults,
       description: 'Tải file Excel',
       count: dashboardData.pendingScores
     }
@@ -479,6 +508,8 @@ const AdminDashboard = () => {
       </div>
     );
   }
+
+
 
   return (
     <Layout>
@@ -579,7 +610,7 @@ const AdminDashboard = () => {
                           background: 'white'
                         }}
                         bodyStyle={{ padding: 20 }}
-                        onClick={() => navigate(action.path)}
+                      onClick={action.onClick}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <Space>

@@ -24,6 +24,7 @@ import Profile from '../pages/Profile';
 import ChangePassword from '../pages/ChangePassword';
 import GoogleCallback from '../pages/google-callback';
 import TopicManagement from '../pages/TopicManagement';
+import AdminQuestionManager from '../pages/AdminQuestionManager';
 
 const Main = () => {
   const location = useLocation();
@@ -117,6 +118,12 @@ const Main = () => {
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/google-callback" element={<GoogleCallback />} />
         <Route path="/admin/topics" element={<TopicManagement />} />
+        <Route path="/admin/topics/:examCode/questions" element={<AdminQuestionManager />} />
+       
+
+        {/* <Route path="/admin/topics/:examCode" element={<AdminQuestionManager />} /> */}
+{/* <Route path="/admin/exams" element={<TopicManagement />} /> */}
+
         
 
 
