@@ -82,7 +82,8 @@ const PracticeResults = () => {
     // Nếu là user thường → lọc lại theo userId để đảm bảo an toàn hiển thị
     const filteredData = isAdmin
       ? data
-      : data.filter(item => item.userId === userData._id);
+      : data.filter(item => item.userId?._id === userData._id
+);
 
     setResults(filteredData);
     setFilteredResults(filteredData);
@@ -91,6 +92,40 @@ const PracticeResults = () => {
     message.error('Không thể tải kết quả luyện tập');
   } finally {
     setLoading(false);
+  }
+};
+
+const handleExportExcel = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      message.error('Vui lòng đăng nhập.');
+      return;
+    }
+
+    const response = await fetch('http://localhost:9999/api/practice-results/export-excel', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Lỗi HTTP: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ket-qua-luyen-tap-${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('❌ Lỗi khi xuất file Excel:', err);
+    message.error('Không thể xuất báo cáo Excel');
   }
 };
 
@@ -248,9 +283,14 @@ const PracticeResults = () => {
                 <Button icon={<ReloadOutlined />} onClick={fetchResults} loading={loading}>
                   Làm mới
                 </Button>
-                <Button type="primary" icon={<DownloadOutlined />}>
-                  Xuất báo cáo
-                </Button>
+                <Button 
+  type="primary" 
+  icon={<DownloadOutlined />} 
+  onClick={handleExportExcel}
+>
+  Xuất báo cáo
+</Button>
+
               </Space>
             </Col>
           </Row>
